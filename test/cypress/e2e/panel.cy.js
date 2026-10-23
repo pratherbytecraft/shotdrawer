@@ -84,6 +84,22 @@ describe('the list', () => {
     cy.calls('hide').should('have.length', 0);
   });
 
+  it('the circle on a picture picks it without copying, in List and Grid', () => {
+    cy.page('panel/index.html');
+    row('Screenshot yesterday.png').find('.pick').click({ force: true });
+    cy.get('.row.sel').should('have.length', 1);
+    cy.calls('copy').should('have.length', 0);
+    cy.get('#sel-msg').should('contain', '1 selected');
+    // Once something's picked the circles at the left take over.
+    cy.get('.list.picking').should('exist');
+    cy.page('panel/index.html', (state) => {
+      state.settings.layout = 'grid';
+    });
+    cy.get('.tile').eq(1).find('.pick').click({ force: true });
+    cy.get('.tile.sel').should('have.length', 1);
+    cy.calls('copy').should('have.length', 0);
+  });
+
   it('Cmd click on a picked one unpicks it', () => {
     cy.page('panel/index.html');
     row('Screenshot yesterday.png').find('.info').click({ metaKey: true });

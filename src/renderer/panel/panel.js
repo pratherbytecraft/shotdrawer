@@ -89,9 +89,12 @@ function sizeLine(info) {
   return parts.join(' · ');
 }
 
+// The picture, with the circle that picks it on its corner, shown while the
+// pointer is on the row and nothing is picked yet.
 function thumb(shot) {
   const info = details[shot.path];
-  return `<div class="th" draggable="true">${info && info.thumb ? `<img src="${info.thumb}" alt="">` : ''}</div>`;
+  return `<div class="thw"><div class="th" draggable="true">${info && info.thumb ? `<img src="${info.thumb}" alt="">` : ''}</div>`
+    + '<button class="pick" data-act="pick" title="Pick"></button></div>';
 }
 
 function emptyState() {
@@ -147,7 +150,8 @@ function render() {
       return out;
     }).join('');
     const scroll = body.querySelector('.list') ? body.querySelector('.list').scrollTop : 0;
-    body.innerHTML = grid ? `<div class="list"><div class="grid">${items}</div></div>` : `<div class="list">${items}</div>`;
+    const cls = picked.size ? 'list picking' : 'list';
+    body.innerHTML = grid ? `<div class="${cls}"><div class="grid">${items}</div></div>` : `<div class="${cls}">${items}</div>`;
     body.querySelector('.list').scrollTop = scroll;
   }
 
@@ -281,6 +285,7 @@ body.addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]');
   if (act && act.dataset.act === 'show') api.show(item.dataset.path);
   else if (act && act.dataset.act === 'menu') openMenu(item.dataset.path);
+  else if (act && act.dataset.act === 'pick') clickShot(item.dataset.path, { metaKey: true });
   else clickShot(item.dataset.path, e);
 });
 
