@@ -77,6 +77,15 @@ describe('the list', () => {
     cy.calls('copy').should('have.length', 0);
   });
 
+  it('the file name shows when the pointer rests on a row, but not on its buttons', () => {
+    cy.page('panel/index.html');
+    row('Screenshot yesterday.png').find('.info').trigger('mouseover');
+    cy.get('#tip', { timeout: 2000 }).should('not.have.attr', 'hidden');
+    cy.get('#tip').should('have.text', 'Screenshot yesterday.png');
+    row('Screenshot yesterday.png').find('[data-act="show"]').trigger('mouseover', { force: true });
+    cy.get('#tip').should('have.attr', 'hidden');
+  });
+
   it('dragging a picture hands the file over', () => {
     cy.page('panel/index.html');
     row('Screenshot yesterday.png').find('.th').trigger('dragstart');

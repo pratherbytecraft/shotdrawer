@@ -313,7 +313,8 @@ let tipTimer = null;
 let tipFor = null;
 body.addEventListener('mouseover', (e) => {
   const item = e.target.closest('[data-path]');
-  if (!item) {
+  // The row's buttons have tips of their own.
+  if (!item || e.target.closest('[data-act]')) {
     hideTip();
     return;
   }
