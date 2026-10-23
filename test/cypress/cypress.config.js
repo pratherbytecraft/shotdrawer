@@ -53,7 +53,11 @@ function shotdrawerState() {
     startbar: false,
     loginItem: { on: true, needsApproval: false },
     update: { state: 'idle' },
-    updateCommand: 'npm install -g shotdrawer'
+    updateCommand: 'npm install -g shotdrawer',
+    siblings: [
+      { key: 'startbar', name: 'Startbar', desc: 'A taskbar.', installed: true, line: 'npm install -g startbar' },
+      { key: 'filedrawer', name: 'Filedrawer', desc: 'A file manager.', installed: false, line: 'npm install -g filedrawer' }
+    ]
   };
 }
 

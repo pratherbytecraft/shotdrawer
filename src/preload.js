@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('shotdrawer', {
   checkUpdates: () => ipcRenderer.send('updates:check'),
   copyText: (text) => ipcRenderer.send('text:copy', text),
   openLink: (key) => ipcRenderer.send('link:open', key),
+  openSibling: (key) => ipcRenderer.send('sibling:open', key),
   showFolder: () => ipcRenderer.send('folder:show'),
   changeFolder: () => ipcRenderer.send('folder:change'),
   clearHistory: () => ipcRenderer.send('history:clear'),

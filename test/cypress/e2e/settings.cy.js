@@ -111,6 +111,17 @@ describe('settings window', () => {
     cy.calls('openLink').should('deep.equal', [['website'], ['github'], ['community'], ['kofi']]);
   });
 
+  it('About lists the other apps, Open for one that\'s installed and its install line for one that isn\'t', () => {
+    cy.page('settings/index.html?page=about');
+    cy.get('.sib[data-key="startbar"]').should('contain', 'Installed').find('code').should('not.exist');
+    cy.get('.sib[data-key="startbar"] [data-act="open"]').click();
+    cy.calls('openSibling').should('deep.equal', [['startbar']]);
+    cy.get('.sib[data-key="filedrawer"] code').should('have.text', 'npm install -g filedrawer');
+    cy.get('.sib[data-key="filedrawer"] [data-act="copy"]').click();
+    cy.calls('copyText').should('deep.equal', [['npm install -g filedrawer']]);
+    cy.get('.sib[data-key="filedrawer"] [data-act="copy"]').should('have.text', 'Copied');
+  });
+
   it('no update line row until one is out', () => {
     cy.page('settings/index.html?page=about');
     cy.get('#update-row').should('not.be.visible');
@@ -122,7 +133,8 @@ describe('settings window', () => {
     cy.get('#title').should('have.text', 'Search');
     cy.get('.r:visible').should('have.length', 1).and('contain', 'Layout');
     cy.get('#search').clear().type('copy');
-    cy.get('.r:visible').should('have.length', 2);
+    // Copy several paths as, its sample, and Filedrawer's row with its Copy button.
+    cy.get('.r:visible').should('have.length', 3).last().should('contain', 'Filedrawer');
     cy.get('#sample').should('be.visible');
     cy.get('#search').clear().type('menu bar icon');
     cy.get('.none-found').should('be.visible');

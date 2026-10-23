@@ -9,6 +9,12 @@ const APPS = {
   filedrawer: { id: 'com.pratherbytecraft.filedrawer', name: 'Filedrawer.app' },
   startbar: { id: 'com.pratherbytecraft.startbar', name: 'Startbar.app' }
 };
+
+// The About page's Also from Prather Bytecraft group, in this order.
+const ABOUT = [
+  { key: 'startbar', name: 'Startbar', desc: 'A taskbar along the bottom of the screen, with a Start menu and a button for every window.' },
+  { key: 'filedrawer', name: 'Filedrawer', desc: 'A file manager laid out like the classic file windows, with tabs and two panes.' }
+];
 const FRESH = 30 * 1000;
 
 const seen = {};
@@ -33,4 +39,14 @@ function appPath(key) {
   return found;
 }
 
-module.exports = { appPath, APPS };
+// The line that installs an app, the same way this copy was installed.
+function installLine(key, brew) {
+  return brew ? `brew install pratherbytecraft/tap/${key}` : `npm install -g ${key}`;
+}
+
+// The group's rows: each app, whether it's installed, and its install line.
+function about(brew) {
+  return ABOUT.map((a) => ({ ...a, installed: !!appPath(a.key), line: installLine(a.key, brew) }));
+}
+
+module.exports = { appPath, APPS, about, installLine };

@@ -4,6 +4,13 @@ const api = window.shotdrawer;
 const $ = (id) => document.getElementById(id);
 
 const TITLES = { general: 'General', look: 'Look', about: 'About' };
+
+// The other two apps' icons, from their design/app-icon.svg.
+const ICONS = {
+  startbar: '<svg viewBox="0 0 120 120"><defs><linearGradient id="r1" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9fa8ff"/><stop offset=".55" stop-color="#5865F2"/><stop offset="1" stop-color="#4c46d6"/></linearGradient><linearGradient id="g1" x1="0" y1="44" x2="0" y2="76" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b6f47a"/><stop offset="1" stop-color="#2fae57"/></linearGradient></defs><circle cx="60" cy="60" r="54" fill="#0b0e1a" stroke="url(#r1)" stroke-width="5"/><rect x="22" y="44" width="76" height="32" rx="16" fill="url(#g1)"/><circle cx="40" cy="60" r="8" fill="#0b0e1a"/><path d="M52 55 H84 M52 65 H74" stroke="#0b0e1a" stroke-width="5" stroke-linecap="round"/></svg>',
+  filedrawer: '<svg viewBox="0 0 120 120"><defs><linearGradient id="r2" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9fa8ff"/><stop offset=".55" stop-color="#5865F2"/><stop offset="1" stop-color="#4c46d6"/></linearGradient><linearGradient id="m2" x1="0" y1="34" x2="0" y2="90" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffe9a6"/><stop offset="1" stop-color="#f0a43a"/></linearGradient></defs><circle cx="60" cy="60" r="54" fill="#0b0e1a" stroke="url(#r2)" stroke-width="5"/><path d="M24 40 V86 A4 4 0 0 0 28 90 H92 A4 4 0 0 0 96 86 V46 A4 4 0 0 0 92 42 H62 L55 34 H28 A4 4 0 0 0 24 38 Z" fill="url(#m2)"/><path d="M60 52 V84" stroke="#5865F2" stroke-width="5" stroke-linecap="round"/><path d="M32 62 H52 M32 72 H48 M68 62 H88 M68 72 H84" stroke="#0b0e1a" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/></svg>'
+};
+let copiedLine = null; // the install line just copied, for a moment
 const SIZES = { min: 5, max: 100, step: 5 };
 
 let app = null;
@@ -61,7 +68,17 @@ function draw() {
   $('update-row').hidden = !(app.update && app.update.state === 'available');
   // The line matches how this copy was installed, Homebrew or npm.
   $('update-cmd').textContent = app.updateCommand;
+  drawSiblings();
   runSearch();
+}
+
+// The other two apps: Open when installed, else the line that installs
+// them with a Copy button.
+function drawSiblings() {
+  $('siblings').innerHTML = (app.siblings || []).map((s) => `<div class="r sib" data-key="${s.key}">${ICONS[s.key] || ''}
+    <div class="lab"><div class="nm">${esc(s.name)}</div><div class="desc">${esc(s.desc)}</div>${s.installed ? '' : `<code>${esc(s.line)}</code>`}</div>
+    ${s.installed ? '<span class="state">Installed</span><button class="btn" data-act="open">Open</button>'
+      : `<button class="btn" data-act="copy">${copiedLine === s.line ? 'Copied' : 'Copy'}</button>`}</div>`).join('');
 }
 
 function showPage(p) {
@@ -128,6 +145,22 @@ $('copy-cmd').addEventListener('click', () => {
   api.copyText(app.updateCommand);
   $('copy-cmd').textContent = 'Copied';
   setTimeout(() => { $('copy-cmd').textContent = 'Copy'; }, 1500);
+});
+$('siblings').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const s = app.siblings.find((x) => x.key === b.closest('[data-key]').dataset.key);
+  if (b.dataset.act === 'open') {
+    api.openSibling(s.key);
+    return;
+  }
+  api.copyText(s.line);
+  copiedLine = s.line;
+  drawSiblings();
+  setTimeout(() => {
+    copiedLine = null;
+    drawSiblings();
+  }, 1500);
 });
 document.querySelector('.links').addEventListener('click', (e) => {
   const b = e.target.closest('[data-link]');

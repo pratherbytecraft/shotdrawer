@@ -31,7 +31,8 @@ app.setName('Shotdrawer');
 
 // The line that updates this copy, for the About page: Homebrew keeps what
 // it installs in its Cellar folder, npm in a node_modules folder.
-const UPDATE_COMMAND = /\/Cellar\/shotdrawer\//.test(fs.realpathSync(__dirname)) ? 'brew upgrade shotdrawer' : 'npm install -g shotdrawer';
+const BREW = /\/Cellar\/shotdrawer\//.test(fs.realpathSync(__dirname));
+const UPDATE_COMMAND = BREW ? 'brew upgrade shotdrawer' : 'npm install -g shotdrawer';
 
 const LINKS = {
   website: 'https://pratherbytecraft.com',
@@ -60,7 +61,8 @@ function state() {
     startbar: !!siblings.appPath('startbar'),
     loginItem: prefs.loginItem(),
     update: updates.get(),
-    updateCommand: UPDATE_COMMAND
+    updateCommand: UPDATE_COMMAND,
+    siblings: siblings.about(BREW)
   };
 }
 
@@ -149,6 +151,11 @@ ipcMain.on('login:set', (_e, on) => {
 ipcMain.on('updates:check', () => updates.check(VERSION));
 ipcMain.on('text:copy', (_e, text) => clipboard.writeText(String(text)));
 ipcMain.on('link:open', (_e, key) => LINKS[key] && shell.openExternal(LINKS[key]));
+// Starts one of the other apps, or brings it forward when it's running.
+ipcMain.on('sibling:open', (_e, key) => {
+  const at = siblings.APPS[key] && siblings.appPath(key);
+  if (at) execFile('open', ['-a', at], (err) => err && console.log(`Shotdrawer: ${key} didn't open: ${err.message}`));
+});
 ipcMain.on('folder:show', () => showIn(where.folder, { folder: true }));
 ipcMain.on('folder:change', (e) => changeFolder(prefs.window && e.sender === prefs.window.webContents ? prefs.window : null));
 ipcMain.on('privacy:open', () => {
