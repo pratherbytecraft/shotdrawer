@@ -15,6 +15,11 @@ contextBridge.exposeInMainWorld('shotdrawer', {
   quit: () => ipcRenderer.send('app:quit'),
   details: (files) => ipcRenderer.invoke('shots:details', files),
   copy: (file) => ipcRenderer.send('shot:copy', file),
+  copyMany: (files) => ipcRenderer.send('shots:copy', files),
+  show: (file) => ipcRenderer.send('shot:show', file),
+  menu: (file, picked) => ipcRenderer.send('shot:menu', file, picked),
+  drag: (files, picture) => ipcRenderer.send('shots:drag', files, picture),
+  onCopied: on('copied'),
   clearHistory: () => ipcRenderer.send('history:clear'),
   folderMenu: () => ipcRenderer.send('folder:menu'),
   openPrivacy: () => ipcRenderer.send('privacy:open')

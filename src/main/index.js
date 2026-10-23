@@ -1,6 +1,7 @@
 // Shotdrawer main process. Owns the menu bar icon, the list and everything
 // that touches the disk. Renderers only draw.
-const { app, ipcMain, clipboard, dialog, shell, Menu } = require('electron');
+const { app, ipcMain, clipboard, dialog, shell, Menu, nativeImage } = require('electron');
+const { execFile } = require('child_process');
 const path = require('path');
 const tray = require('./tray');
 const panel = require('./panel');
@@ -9,6 +10,8 @@ const history = require('./history');
 const watcher = require('./watcher');
 const settings = require('./settings');
 const thumbs = require('./thumbs');
+const copy = require('./copy');
+const siblings = require('./siblings');
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
 // so it stays the same across updates (see scripts/build-app.js).
@@ -24,8 +27,20 @@ app.setName('Shotdrawer');
 let where = { folder: null, prefix: 'Screenshot' };
 let access = null; // ok | missing | denied once the screenshot folder was looked at
 
+// Filedrawer when it's installed and picked for Show in, else null for Finder.
+function viewer() {
+  return settings.get().showIn === 'filedrawer' ? siblings.appPath('filedrawer') : null;
+}
+
 function state() {
-  return { version: VERSION, folder: where.folder, access, shots: history.list(), settings: settings.get() };
+  return {
+    version: VERSION,
+    folder: where.folder,
+    access,
+    shots: history.list(),
+    settings: settings.get(),
+    viewer: viewer() ? 'Filedrawer' : 'Finder'
+  };
 }
 
 // One scan at a time; a call during a scan runs one more after it.
@@ -79,9 +94,18 @@ ipcMain.on('history:clear', () => {
   history.clear();
   panel.send('state', state());
 });
+ipcMain.on('shots:copy', (_e, files) => clipboard.writeText(copy.join(files, settings.get().copyFormat)));
+ipcMain.on('shot:show', (_e, file) => showIn(file));
+ipcMain.on('shot:menu', (_e, file, picked) => shotMenu(file, picked));
+ipcMain.on('shots:drag', (e, files, picture) => {
+  let icon = picture ? nativeImage.createFromDataURL(picture) : null;
+  if (!icon || icon.isEmpty()) icon = nativeImage.createFromPath(path.join(__dirname, '..', '..', 'assets', 'Shotdrawer.icns'));
+  e.sender.startDrag({ file: files[0], files, icon: icon.resize({ width: 64 }) });
+});
 ipcMain.on('folder:menu', () => {
+  const folder = where.folder;
   Menu.buildFromTemplate([
-    { label: 'Show in Finder', click: () => shell.openPath(where.folder) },
+    { label: `Show in ${state().viewer}`, click: () => showIn(folder, { folder: true }) },
     { label: 'Change Folder…', click: changeFolder }
   ]).popup({ window: panel.window() });
 });
@@ -89,6 +113,42 @@ ipcMain.on('privacy:open', () => {
   shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
   panel.hide();
 });
+
+// Shows a screenshot picked in its folder, or a folder itself, in
+// Filedrawer when it's picked and installed, else in Finder.
+function showIn(file, { folder = false } = {}) {
+  panel.hide();
+  const fd = viewer();
+  if (fd) execFile('open', ['-a', fd, file], (err) => err && (folder ? shell.openPath(file) : shell.showItemInFolder(file)));
+  else if (folder) shell.openPath(file);
+  else shell.showItemInFolder(file);
+}
+
+function copied(file, text) {
+  clipboard.writeText(text);
+  panel.send('copied', file);
+}
+
+// The right click menu on a screenshot. picked is the list of screenshots
+// picked together when this one is among them.
+function shotMenu(file, picked) {
+  const items = [];
+  if (picked.length > 1) {
+    items.push({ label: `Copy ${picked.length} Paths`, click: () => copied(file, copy.join(picked, settings.get().copyFormat)) }, { type: 'separator' });
+  }
+  items.push(
+    { label: 'Copy Path', click: () => copied(file, file) },
+    { label: 'Copy as file:// URL', click: () => copied(file, copy.fileUrl(file)) },
+    { label: 'Copy Filename', click: () => copied(file, copy.fileName(file)) },
+    { type: 'separator' },
+    { label: `Show in ${state().viewer}`, click: () => showIn(file) },
+    { label: 'Open', click: () => { panel.hide(); shell.openPath(file); } },
+    { type: 'separator' },
+    { label: 'Remove from History', click: () => history.remove(file) && panel.send('state', state()) },
+    { label: 'Move to Trash', click: () => shell.trashItem(file).catch((err) => console.log(`Shotdrawer: ${file} wasn't moved to the Trash: ${err.message}`)).then(rescan) }
+  );
+  Menu.buildFromTemplate(items).popup({ window: panel.window() });
+}
 
 // Picks a new folder for the screenshot tool to save to. The list closes
 // while the folder picker is up, it would close anyway once the picker

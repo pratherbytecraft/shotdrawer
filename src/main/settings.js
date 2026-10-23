@@ -6,11 +6,15 @@ const path = require('path');
 
 const DEFAULTS = Object.freeze({
   historySize: 20, // how many screenshots the list keeps, 5 to 100 in steps of 5
-  layout: 'list' // list | grid
+  layout: 'list', // list | grid
+  copyFormat: 'newline', // newline | space | quoted: how several paths are joined
+  showIn: 'filedrawer' // filedrawer | finder: where Show in opens, when Filedrawer is installed
 });
 
 const CHOICES = {
-  layout: ['list', 'grid']
+  layout: ['list', 'grid'],
+  copyFormat: ['newline', 'space', 'quoted'],
+  showIn: ['filedrawer', 'finder']
 };
 
 let file = null;

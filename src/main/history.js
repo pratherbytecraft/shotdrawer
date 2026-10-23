@@ -89,9 +89,19 @@ async function scan(folder, prefix, limit) {
   return { changed, access: seen.access };
 }
 
+// Takes one screenshot out of the list. seenUpTo stays, so it doesn't come
+// back on the next rescan.
+function remove(file) {
+  const shots = data.shots.filter((s) => s.path !== file);
+  if (shots.length === data.shots.length) return false;
+  data = { ...data, shots };
+  save();
+  return true;
+}
+
 function clear(now = Date.now()) {
   data = { seenUpTo: Math.max(data.seenUpTo ?? 0, now), shots: [] };
   save();
 }
 
-module.exports = { init, list, apply, found, scan, clear };
+module.exports = { init, list, apply, found, scan, remove, clear };

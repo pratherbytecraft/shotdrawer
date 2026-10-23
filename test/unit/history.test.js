@@ -130,3 +130,20 @@ test('a folder it can\'t read keeps the list as it was', async () => {
     fs.chmodSync(folder, 0o755);
   }
 });
+
+test('a screenshot taken out with remove stays out', async () => {
+  const data = tempDir();
+  const folder = tempDir();
+  history.init(data);
+  const a = path.join(folder, 'Screenshot a.png');
+  fs.writeFileSync(a, 'x');
+  await new Promise((r) => setTimeout(r, 20));
+  const b = path.join(folder, 'Screenshot b.png');
+  fs.writeFileSync(b, 'x');
+  await history.scan(folder, 'Screenshot', 20);
+  // The newest one, so seenUpTo has to cover it on its own.
+  assert.ok(history.remove(b));
+  assert.ok(!history.remove(b));
+  await history.scan(folder, 'Screenshot', 20);
+  assert.deepStrictEqual(history.list().map((s) => s.path), [a]);
+});
