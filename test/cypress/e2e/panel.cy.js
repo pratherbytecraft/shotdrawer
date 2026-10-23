@@ -12,6 +12,28 @@ describe('the list', () => {
     cy.get('.row').last().find('.l1').should('not.contain', 'ago');
   });
 
+  it('the time comes from the screenshot\'s name when it has one', () => {
+    let named;
+    cy.page('panel/index.html', (state) => {
+      // Yesterday at 2:15:07 PM by its name, written to disk at 2:16:02.
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      named = `Screenshot ${ymd} at 2.15.07\u202fPM.png`;
+      state.shots[2] = { path: `${state.folder}/${named}`, at: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 14, 16, 2).getTime() };
+    });
+    cy.then(() => row(named).find('.l1').invoke('text').should('match', /^2:15[\s\u202f]PM/));
+  });
+
+  it('a name far from when the file was made isn\'t trusted', () => {
+    let named;
+    cy.page('panel/index.html', (state) => {
+      named = 'Screenshot 2019-03-02 at 10.01.22 AM.png';
+      state.shots[2] = { path: `${state.folder}/${named}`, at: new Date().setHours(0, 0, 0, 0) - 10 * 60 * 60 * 1000 };
+    });
+    cy.then(() => row(named).find('.l1').invoke('text').should('match', /^2:00[\s\u202f]PM/));
+  });
+
   it('a click copies the path and shows Copied', () => {
     cy.page('panel/index.html');
     row('Screenshot yesterday.png').find('.info').click();

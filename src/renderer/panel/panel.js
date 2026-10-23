@@ -32,6 +32,20 @@ const FORMAT_LABEL = { newline: 'one per line', space: 'space separated', quoted
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const baseName = (p) => p.slice(p.lastIndexOf('/') + 1);
 
+// When a screenshot was taken, from its name ("Screenshot 2026-10-26 at
+// 9.38.04 PM", or 21.38.04 on a Mac set to 24 hours). The file itself is
+// written a few seconds later, and that's `at`. A name far off from the file
+// (an old screenshot copied in by hand) isn't trusted.
+const NAMED = /(\d{4})-(\d{2})-(\d{2}) at (\d{1,2})\.(\d{2})\.(\d{2})(?:[\s\u202f\u00a0]*([AaPp])[Mm])?/;
+function takenAt(shot) {
+  const m = baseName(shot.path).match(NAMED);
+  if (!m) return shot.at;
+  let hour = Number(m[4]);
+  if (m[7]) hour = (hour % 12) + (m[7].toLowerCase() === 'p' ? 12 : 0);
+  const t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), hour, Number(m[5]), Number(m[6])).getTime();
+  return Math.abs(t - shot.at) < 60 * 60 * 1000 ? t : shot.at;
+}
+
 function dayOf(at, now) {
   const d = new Date(at);
   const today = new Date(now);
@@ -104,13 +118,14 @@ function render() {
   } else {
     let lastDay = null;
     const items = shots.map((shot) => {
-      const day = dayOf(shot.at, now);
+      const taken = takenAt(shot);
+      const day = dayOf(taken, now);
       let out = '';
       if (day !== lastDay) {
         out += `<div class="day">${day}</div>`;
         lastDay = day;
       }
-      const time = timeOf(shot.at, day);
+      const time = timeOf(taken, day);
       const isCopied = copied && copied.path === shot.path && copied.until > now;
       const mark = isCopied ? `<div class="copied">${I.check} Copied</div>` : '';
       const attrs = `data-path="${esc(shot.path)}"`;
@@ -120,7 +135,7 @@ function render() {
       if (grid) {
         out += `<div class="tile${on ? ' sel' : ''}" ${attrs}>${thumb(shot)}${chk}<div class="over">${btns}</div>${mark}<div class="cap">${esc(time)}</div></div>`;
       } else {
-        const when = day === 'Today' ? ` <span>· ${ago(shot.at, now)}</span>` : '';
+        const when = day === 'Today' ? ` <span>· ${ago(taken, now)}</span>` : '';
         out += `<div class="row${on ? ' sel' : ''}" ${attrs}>${chk}${thumb(shot)}
           <div class="info"><div class="l1">${esc(time)}${when}</div><div class="l2">${esc(sizeLine(details[shot.path]))}</div></div>${mark || `<div class="acts">${btns}</div>`}</div>`;
       }
