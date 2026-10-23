@@ -120,6 +120,10 @@ ipcMain.on('panel:hide', () => panel.hide());
 ipcMain.on('app:quit', () => app.quit());
 ipcMain.handle('shots:details', (_e, files) => thumbs.details(files));
 ipcMain.on('shot:copy', (_e, file) => clipboard.writeText(file));
+ipcMain.on('history:unremove', (_e, files) => {
+  history.unremove(files);
+  rescan();
+});
 ipcMain.on('history:clear', () => {
   history.clear();
   broadcast();
@@ -195,9 +199,18 @@ function shotMenu(file, picked) {
     // Opened in one go, so pictures share one Preview window.
     { label: n ? `Open ${n.trim()}` : 'Open', click: () => { panel.hide(); execFile('open', files, () => {}); } },
     { type: 'separator' },
-    { label: n ? `Remove ${n}from History` : 'Remove from History', click: () => history.remove(files) && broadcast() },
+    { label: n ? `Remove ${n}from History` : 'Remove from History', click: () => removeFromHistory(files) },
     { label: n ? `Move ${n}to Trash` : 'Move to Trash', click: () => trash(files) }
   ]).popup({ window: panel.window() });
+}
+
+// Takes screenshots out of the list, and the list offers an Undo. The next
+// older screenshot in the folder moves up into the free spot.
+function removeFromHistory(files) {
+  if (!history.remove(files)) return;
+  broadcast();
+  panel.send('removed', files);
+  rescan();
 }
 
 async function trash(files) {

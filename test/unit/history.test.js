@@ -179,3 +179,18 @@ test('scan follows a screenshot renamed in its folder, to any name', async () =>
   await history.scan(folder, 'Screenshot', 20);
   assert.deepStrictEqual(history.list(), []);
 });
+
+test('Undo lets a removed screenshot back into the list', async () => {
+  const data = tempDir();
+  const folder = tempDir();
+  history.init(data);
+  const a = path.join(folder, 'Screenshot a.png');
+  fs.writeFileSync(a, 'x');
+  await history.scan(folder, 'Screenshot', 20);
+  history.remove([a]);
+  await history.scan(folder, 'Screenshot', 20);
+  assert.deepStrictEqual(history.list(), []);
+  history.unremove([a]);
+  await history.scan(folder, 'Screenshot', 20);
+  assert.deepStrictEqual(history.list().map((s) => s.path), [a]);
+});

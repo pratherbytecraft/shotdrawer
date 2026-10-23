@@ -1,8 +1,8 @@
 /* The list under the menu bar icon, from mockups/menu.html. The window's
    menu blur is the background, so the page only draws on top of it. */
-:root { --accent: #0A84FF; --line: rgba(255,255,255,.08); --text: rgba(255,255,255,.92); --muted: rgba(255,255,255,.52); --hover: rgba(255,255,255,.07); --sel: rgba(10,132,255,.26); --chip: rgba(255,255,255,.09); --thumbline: rgba(255,255,255,.10); --copied: #30d158; --head: rgba(42,42,46,.92); }
+:root { --accent: #0A84FF; --line: rgba(255,255,255,.08); --text: rgba(255,255,255,.92); --muted: rgba(255,255,255,.52); --hover: rgba(255,255,255,.07); --sel: rgba(10,132,255,.26); --chip: rgba(255,255,255,.09); --thumbline: rgba(255,255,255,.10); --copied: #30d158; --head: rgba(40,40,44,.98); }
 @media (prefers-color-scheme: light) {
-  :root { --accent: #007AFF; --line: rgba(0,0,0,.08); --text: #1d1d1f; --muted: rgba(0,0,0,.5); --hover: rgba(0,0,0,.05); --sel: rgba(0,122,255,.16); --chip: rgba(0,0,0,.06); --thumbline: rgba(0,0,0,.10); --copied: #1f9d45; --head: rgba(238,238,240,.94); }
+  :root { --accent: #007AFF; --line: rgba(0,0,0,.08); --text: #1d1d1f; --muted: rgba(0,0,0,.5); --hover: rgba(0,0,0,.05); --sel: rgba(0,122,255,.16); --chip: rgba(0,0,0,.06); --thumbline: rgba(0,0,0,.10); --copied: #1f9d45; --head: rgba(236,236,238,.98); }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: transparent; }
@@ -19,7 +19,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 .list { max-height: 440px; overflow: auto; padding: 0 6px 6px; }
 /* A day's heading stays at the top while its screenshots scroll under it. */
-.day { position: sticky; top: 0; z-index: 3; font-size: 11px; font-weight: 600; color: var(--muted); padding: 8px 8px 4px; background: var(--head); backdrop-filter: blur(12px); }
+.day { position: sticky; top: 0; z-index: 3; font-size: 11px; font-weight: 600; color: var(--muted); padding: 8px 8px 4px; background: var(--head); backdrop-filter: blur(24px); }
 .row { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; }
 .row:hover { background: var(--hover); }
 .row.sel { background: var(--sel); }

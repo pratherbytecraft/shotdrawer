@@ -136,6 +136,14 @@ function remove(files) {
   return gone;
 }
 
+// Lets screenshots taken out by remove back in, for Undo. They show again
+// on the next look at the folder, if there's room.
+function unremove(files) {
+  const back = new Set([].concat(files));
+  data = { ...data, removed: data.removed.filter((p) => !back.has(p)) };
+  save();
+}
+
 // Empties the list. What was in the folder before now stays out; the
 // clear time covers everything taken out by hand before it too.
 function clear(now = Date.now()) {
@@ -143,4 +151,4 @@ function clear(now = Date.now()) {
   save();
 }
 
-module.exports = { init, list, apply, found, renames, scan, remove, clear };
+module.exports = { init, list, apply, found, renames, scan, remove, unremove, clear };

@@ -26,6 +26,11 @@ let confirming = false;
 const picked = new Set(); // paths picked with Cmd click, Shift click or a sweep
 let anchor = null; // the last path clicked with Cmd or Shift, where a Shift range starts
 let pickedCopied = 0; // until when the selection bar says Copied
+// After Remove from History, the files for its Undo, and whether Undo was
+// used. The line stays until the list closes, after Undo too, so nothing
+// below it moves under the pointer (the footer's Quit would slide up into
+// its place).
+let undo = null; // { files, done }
 
 const FORMAT_LABEL = { newline: 'one per line', space: 'space separated', quoted: 'shell quoted' };
 
@@ -149,6 +154,14 @@ function render() {
   const folder = document.getElementById('folder');
   folder.innerHTML = `${I.folder}<span>${esc(baseName(state.folder || ''))}</span>${I.chev}`;
   document.getElementById('clear').disabled = shots.length === 0;
+  // The Undo line after Remove from History, while nothing's picked.
+  const undoBar = document.getElementById('undobar');
+  undoBar.hidden = !undo || picked.size > 0;
+  if (undo) {
+    const what = undo.files.length === 1 ? 'a screenshot' : `${undo.files.length} screenshots`;
+    document.getElementById('undo-msg').textContent = undo.done ? 'Back in the list.' : `Removed ${what} from the list.`;
+    document.getElementById('undo').style.visibility = undo.done ? 'hidden' : '';
+  }
   const selbar = document.getElementById('selbar');
   selbar.hidden = picked.size === 0;
   document.getElementById('sel-msg').innerHTML = `<b>${picked.size} selected</b> · ${FORMAT_LABEL[state.settings.copyFormat]}`;
@@ -191,12 +204,23 @@ api.onState(take);
 // The times and the day headings move on while the list is closed.
 api.onShown(() => {
   confirming = false;
+  undo = null;
   picked.clear();
   anchor = null;
   render();
 });
 // A copy from the right click menu.
 api.onCopied((file) => markCopied(file));
+api.onRemoved((files) => {
+  undo = { files, done: false };
+  render();
+});
+document.getElementById('undo').addEventListener('click', () => {
+  if (!undo || undo.done) return;
+  api.unremove(undo.files);
+  undo.done = true;
+  render();
+});
 setInterval(render, 60 * 1000);
 
 // After a copy the list closes a moment later, once the Copied mark has

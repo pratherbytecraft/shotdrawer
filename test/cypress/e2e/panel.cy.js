@@ -186,6 +186,18 @@ describe('the list', () => {
     cy.calls('quit').should('have.length', 1);
   });
 
+  it('after Remove from History, Undo lets them back in', () => {
+    cy.page('panel/index.html');
+    cy.get('.row').should('have.length', 5);
+    cy.fake().then((api) => api.emit('removed', ['/a.png', '/b.png']));
+    cy.get('#undo-msg').should('have.text', 'Removed 2 screenshots from the list.');
+    cy.get('#undo').click();
+    cy.calls('unremove').should('deep.equal', [[['/a.png', '/b.png']]]);
+    // The line stays, so the footer doesn't slide up under the pointer.
+    cy.get('#undo-msg').should('have.text', 'Back in the list.');
+    cy.get('#undo').should('have.css', 'visibility', 'hidden');
+  });
+
   it('Esc with nothing picked closes the list', () => {
     cy.page('panel/index.html');
     cy.get('.row').should('have.length', 5);

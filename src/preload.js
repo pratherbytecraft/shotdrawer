@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld('shotdrawer', {
   showFolder: () => ipcRenderer.send('folder:show'),
   changeFolder: () => ipcRenderer.send('folder:change'),
   clearHistory: () => ipcRenderer.send('history:clear'),
+  unremove: (files) => ipcRenderer.send('history:unremove', files),
+  onRemoved: on('removed'),
   folderMenu: () => ipcRenderer.send('folder:menu'),
   openPrivacy: () => ipcRenderer.send('privacy:open')
 });
