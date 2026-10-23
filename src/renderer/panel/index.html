@@ -13,16 +13,20 @@
     <span class="t">Screenshots</span>
     <span class="count" id="count" hidden></span>
   </div>
-  <div class="empty" id="empty">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 5V2.5a.7.7 0 0 1 .7-.7H5M11 1.8h2.5a.7.7 0 0 1 .7.7V5M14.2 11v2.5a.7.7 0 0 1-.7.7H11M5 14.2H2.5a.7.7 0 0 1-.7-.7V11"/><path d="M4.5 11l2.5-3 1.8 2 1.2-1.2 1.5 2.2"/></svg>
-    <div class="big">No screenshots yet</div>
-    <div class="small">Press <kbd>⇧⌘3</kbd> for the whole screen or <kbd>⇧⌘4</kbd> for part of it. New ones show up here right away.</div>
+  <div id="body"></div>
+  <div class="bar clear" id="confirm" hidden>
+    <div class="msg" id="confirm-msg"></div>
+    <button class="btn" id="confirm-cancel">Cancel</button>
+    <button class="btn danger" id="confirm-clear">Clear</button>
   </div>
   <div class="foot">
+    <button class="fb" id="folder"></button>
+    <button class="fb" id="clear">Clear History</button>
     <span class="sp"></span>
     <button class="fb" id="quit">Quit</button>
   </div>
 </div>
+<div class="tip" id="tip" hidden></div>
 <script src="panel.js"></script>
 </body>
 </html>

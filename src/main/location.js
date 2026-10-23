@@ -30,6 +30,14 @@ async function read() {
   return parse(location, name);
 }
 
+// Tells the screenshot tool to save to another folder, the same setting its
+// Options menu changes.
+function setFolder(folder) {
+  return new Promise((resolve, reject) => {
+    execFile('defaults', ['write', DOMAIN, 'location', folder], (err) => (err ? reject(err) : resolve()));
+  });
+}
+
 // Calls onChange with the new { folder, prefix } when the screenshot tool's
 // settings file changes and the folder or prefix differ from `current()`.
 // The file is replaced, not edited, so its folder is watched.
@@ -52,4 +60,4 @@ function watch(current, onChange) {
   }
 }
 
-module.exports = { parse, read, watch };
+module.exports = { parse, read, watch, setFolder };

@@ -92,4 +92,4 @@ function send(channel, payload) {
   if (win) win.webContents.send(channel, payload);
 }
 
-module.exports = { create, show, hide, toggle, setHeight, send };
+module.exports = { create, show, hide, toggle, setHeight, send, window: () => win };

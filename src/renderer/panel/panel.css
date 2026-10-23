@@ -1,28 +1,62 @@
 /* The list under the menu bar icon, from mockups/menu.html. The window's
    menu blur is the background, so the page only draws on top of it. */
-:root { --accent: #0A84FF; --line: rgba(255,255,255,.08); --text: rgba(255,255,255,.92); --muted: rgba(255,255,255,.52); --hover: rgba(255,255,255,.07); --chip: rgba(255,255,255,.09); }
+:root { --accent: #0A84FF; --line: rgba(255,255,255,.08); --text: rgba(255,255,255,.92); --muted: rgba(255,255,255,.52); --hover: rgba(255,255,255,.07); --sel: rgba(10,132,255,.26); --chip: rgba(255,255,255,.09); --thumbline: rgba(255,255,255,.10); --copied: #30d158; }
 @media (prefers-color-scheme: light) {
-  :root { --accent: #007AFF; --line: rgba(0,0,0,.08); --text: #1d1d1f; --muted: rgba(0,0,0,.5); --hover: rgba(0,0,0,.05); --chip: rgba(0,0,0,.06); }
+  :root { --accent: #007AFF; --line: rgba(0,0,0,.08); --text: #1d1d1f; --muted: rgba(0,0,0,.5); --hover: rgba(0,0,0,.05); --sel: rgba(0,122,255,.16); --chip: rgba(0,0,0,.06); --thumbline: rgba(0,0,0,.10); --copied: #1f9d45; }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: transparent; }
 body { font: 13px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; color: var(--text); user-select: none; cursor: default; overflow: hidden; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
+[hidden] { display: none !important; }
 
 .panel { display: flex; flex-direction: column; }
 .head { display: flex; align-items: center; gap: 8px; padding: 11px 12px 9px 14px; }
 .head .badge { width: 20px; height: 20px; flex: none; }
 .head .t { font-weight: 600; font-size: 13.5px; }
 .head .count { font-size: 11px; color: var(--muted); background: var(--chip); border-radius: 9px; padding: 1px 7px; }
-[hidden] { display: none !important; }
+
+.list { max-height: 440px; overflow: auto; padding: 0 6px 6px; }
+.day { font-size: 11px; font-weight: 600; color: var(--muted); padding: 8px 8px 4px; }
+.row { position: relative; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; }
+.row:hover { background: var(--hover); }
+.row .info { flex: 1; min-width: 0; }
+.row .l1 { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .l1 span { color: var(--muted); font-weight: 400; }
+.row .l2 { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.copied { display: flex; align-items: center; gap: 4px; color: var(--copied); font-size: 11.5px; font-weight: 600; }
+.copied svg { width: 12px; height: 12px; }
+
+.th { position: relative; flex: none; width: 64px; height: 40px; border-radius: 6px; overflow: hidden; background: var(--chip); box-shadow: 0 0 0 .5px var(--thumbline), 0 1px 3px rgba(0,0,0,.25); }
+.th img { width: 100%; height: 100%; object-fit: cover; display: block; -webkit-user-drag: none; }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 2px 8px 6px; }
+.grid .day { grid-column: 1 / -1; padding: 6px 0 0; }
+.tile { position: relative; border-radius: 8px; padding: 4px; }
+.tile:hover { background: var(--hover); }
+.tile .th { width: 100%; height: auto; aspect-ratio: 16 / 10; }
+.tile .cap { font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .copied { position: absolute; inset: 4px 4px auto 4px; aspect-ratio: 16 / 10; justify-content: center; background: rgba(0,0,0,.55); border-radius: 6px; color: #fff; }
+
+.tip { position: fixed; z-index: 5; font-size: 11px; padding: 3px 7px; border-radius: 5px; background: #ececec; color: #1d1d1f; box-shadow: 0 2px 8px rgba(0,0,0,.25); white-space: nowrap; max-width: 340px; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 
 .empty { text-align: center; padding: 38px 30px 42px; color: var(--muted); }
 .empty svg { width: 44px; height: 44px; margin-bottom: 8px; }
 .empty .big { color: var(--text); font-weight: 500; font-size: 13.5px; margin-bottom: 4px; }
 .empty .small { font-size: 12px; line-height: 1.45; }
+.empty .btn { margin-top: 12px; }
 kbd { font: inherit; font-size: 11px; background: var(--chip); border-radius: 4px; padding: 0 4px; }
 
+.bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); }
+.bar.clear { background: rgba(255,69,58,.10); }
+.bar .msg { flex: 1; font-size: 12px; color: var(--muted); }
+.btn { font-size: 12px; border-radius: 6px; padding: 4px 11px; background: var(--chip); color: var(--text); }
+.btn.danger { background: #ff453a; color: #fff; }
+
 .foot { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
-.foot .fb { display: flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+.foot .fb { display: flex; align-items: center; gap: 5px; padding: 4px 7px; border-radius: 6px; font-size: 12px; color: var(--muted); min-width: 0; }
 .foot .fb:hover { background: var(--hover); color: var(--text); }
+.foot .fb:disabled { opacity: .45; background: none; color: var(--muted); }
+.foot svg { width: 13px; height: 13px; flex: none; }
+.foot #folder span { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .foot .sp { flex: 1; }
