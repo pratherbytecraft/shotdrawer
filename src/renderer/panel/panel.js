@@ -256,6 +256,14 @@ body.addEventListener('mousedown', (e) => {
 });
 body.addEventListener('mouseover', (e) => {
   if (!sweep) return;
+  // The page doesn't always hear the button come up (the rows under the
+  // pointer are drawn again as the sweep goes), so a move with the button
+  // up ends the sweep here too.
+  if (!(e.buttons & 1)) {
+    sweep = null;
+    swept = false;
+    return;
+  }
   const item = e.target.closest('[data-path]');
   if (!item || (item.dataset.path === sweep.from && !swept)) return;
   const order = state.shots.map((s) => s.path);
@@ -273,6 +281,10 @@ window.addEventListener('mouseup', () => {
   setTimeout(() => {
     swept = false;
   }, 0);
+});
+window.addEventListener('blur', () => {
+  sweep = null;
+  swept = false;
 });
 
 // Dragging a picture drops the file, or all the picked ones when it's
