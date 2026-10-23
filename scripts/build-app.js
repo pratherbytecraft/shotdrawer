@@ -148,6 +148,8 @@ function setPlist(dest) {
   set('NSHumanReadableCopyright', 'string', 'Prather Bytecraft. All rights reserved.');
   // A menu bar app: no Dock icon and no app menu.
   set('LSUIElement', 'bool', 'true');
+  // The shotdrawer:// link other apps open to show the list (src/main/link.js).
+  set('CFBundleURLTypes', 'json', JSON.stringify([{ CFBundleURLName: 'Shotdrawer link', CFBundleURLSchemes: ['shotdrawer'] }]));
   // Electron asks for these usage strings by default and Shotdrawer uses
   // none of them. The version keys go too: the bundle stays the same from one
   // Shotdrawer version to the next, so macOS keeps the folder access it gave

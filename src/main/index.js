@@ -15,6 +15,7 @@ const copy = require('./copy');
 const siblings = require('./siblings');
 const prefs = require('./prefs');
 const updates = require('./updates');
+const link = require('./link');
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
 // so it stays the same across updates (see scripts/build-app.js).
@@ -110,7 +111,7 @@ function follow(next) {
 }
 
 ipcMain.handle('state', () => state());
-ipcMain.on('panel:height', (_e, h) => panel.setHeight(h, tray.bounds()));
+ipcMain.on('panel:height', (_e, h) => panel.setHeight(h));
 ipcMain.on('panel:hide', () => panel.hide());
 ipcMain.on('app:quit', () => app.quit());
 ipcMain.handle('shots:details', (_e, files) => thumbs.details(files));
@@ -222,6 +223,25 @@ function showList() {
   opened();
 }
 
+// A shotdrawer:// link from another app (Startbar's tray button). Links that
+// come before Shotdrawer is ready wait for it.
+let ready = false;
+const waiting = [];
+
+function openLink(url) {
+  const res = link.parse(url);
+  if (!res) return;
+  // The button's own click can close the list before the link arrives, so
+  // it gets a longer grace than a click on the menu bar icon.
+  if (panel.toggle(res.spot || tray.bounds(), 700)) opened();
+}
+
+app.on('open-url', (e, url) => {
+  e.preventDefault();
+  if (ready) openLink(url);
+  else waiting.push(url);
+});
+
 app.whenReady().then(async () => {
   // Shotdrawer.app has no Dock icon (LSUIElement). Run as plain Electron it
   // would get one, so it's hidden here too.
@@ -261,6 +281,8 @@ app.whenReady().then(async () => {
     quit: () => app.quit()
   });
   panel.create();
+  ready = true;
+  waiting.splice(0).forEach(openLink);
   follow(await location.read());
   location.watch(() => where, follow);
 });
