@@ -59,6 +59,7 @@ function draw() {
   $('show-folder').textContent = `Show in ${app.viewer}`;
   $('showin-row').hidden = !app.filedrawer;
   seg('showin', s.showIn);
+  $('close-after').classList.toggle('on', s.closeAfterCopy);
   $('login').classList.toggle('on', app.loginItem.on);
   $('login-note').hidden = !app.loginItem.needsApproval;
   seg('layout', s.layout);
@@ -139,6 +140,7 @@ $('layout').addEventListener('click', (e) => {
 });
 $('show-folder').addEventListener('click', () => api.showFolder());
 $('change-folder').addEventListener('click', () => api.changeFolder());
+$('close-after').addEventListener('click', () => set({ closeAfterCopy: !app.settings.closeAfterCopy }));
 $('login').addEventListener('click', () => api.setLoginItem(!app.loginItem.on));
 $('check').addEventListener('click', () => api.checkUpdates());
 $('copy-cmd').addEventListener('click', () => {

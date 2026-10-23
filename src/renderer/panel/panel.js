@@ -16,6 +16,7 @@ const I = {
 };
 
 const COPIED_FOR = 1200; // ms
+const CLOSE_AFTER = 500; // ms the Copied mark shows before the list closes, when it does
 const TIP_AFTER = 600; // ms
 
 let state = null;
@@ -183,10 +184,22 @@ api.onShown(() => {
 api.onCopied((file) => markCopied(file));
 setInterval(render, 60 * 1000);
 
+// After a copy the list closes a moment later, once the Copied mark has
+// been seen, unless the General page keeps it open. Anything done in the
+// list in the meantime keeps it open.
+let closing = null;
+function closeSoon() {
+  clearTimeout(closing);
+  if (state.settings.closeAfterCopy) closing = setTimeout(() => api.hide(), CLOSE_AFTER);
+}
+document.addEventListener('mousedown', () => clearTimeout(closing), true);
+document.addEventListener('keydown', () => clearTimeout(closing), true);
+
 function markCopied(file) {
   copied = { path: file, until: Date.now() + COPIED_FOR };
   render();
   setTimeout(render, COPIED_FOR + 20);
+  closeSoon();
 }
 
 // A plain click copies the path. Cmd click picks or unpicks one, Shift
@@ -305,6 +318,7 @@ document.getElementById('sel-copy').addEventListener('click', () => {
   pickedCopied = Date.now() + COPIED_FOR;
   render();
   setTimeout(render, COPIED_FOR + 20);
+  closeSoon();
 });
 document.getElementById('sel-clear').addEventListener('click', clearPicked);
 

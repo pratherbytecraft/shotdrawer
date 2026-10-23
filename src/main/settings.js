@@ -9,7 +9,8 @@ const DEFAULTS = Object.freeze({
   layout: 'list', // list | grid
   copyFormat: 'newline', // newline | space | quoted: how several paths are joined
   showIn: 'filedrawer', // filedrawer | finder: where Show in opens, when Filedrawer is installed
-  menuBarIcon: 'auto' // auto (hidden while Startbar shows its Shotdrawer button) | always
+  menuBarIcon: 'auto', // auto (hidden while Startbar shows its Shotdrawer button) | always
+  closeAfterCopy: true // the list closes a moment after a copy
 });
 
 const CHOICES = {

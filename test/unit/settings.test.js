@@ -11,6 +11,11 @@ test('keeps the copy format and where Show in opens', () => {
   assert.deepStrictEqual(clean({ copyFormat: 'csv', showIn: 'path finder' }), {});
 });
 
+test('keeps the close after copying switch', () => {
+  assert.deepStrictEqual(clean({ closeAfterCopy: false }), { closeAfterCopy: false });
+  assert.deepStrictEqual(clean({ closeAfterCopy: 'no' }), {});
+});
+
 test('keeps the menu bar icon choice', () => {
   assert.deepStrictEqual(clean({ menuBarIcon: 'always' }), { menuBarIcon: 'always' });
   assert.deepStrictEqual(clean({ menuBarIcon: 'never' }), {});

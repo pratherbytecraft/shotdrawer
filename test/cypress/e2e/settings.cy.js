@@ -73,6 +73,13 @@ describe('settings window', () => {
     cy.calls('set').should('deep.include', [{ menuBarIcon: 'always' }]);
   });
 
+  it('the Close the list after copying switch sends its setting', () => {
+    cy.page('settings/index.html');
+    cy.get('#close-after').should('have.class', 'on').click();
+    cy.calls('set').should('deep.include', [{ closeAfterCopy: false }]);
+    cy.get('#close-after').should('not.have.class', 'on');
+  });
+
   it('the folder buttons and the login switch reach the main process', () => {
     cy.page('settings/index.html');
     cy.get('#folder').should('have.text', '/Users/test/Documents/Temp Screenshots');
@@ -133,8 +140,9 @@ describe('settings window', () => {
     cy.get('#title').should('have.text', 'Search');
     cy.get('.r:visible').should('have.length', 1).and('contain', 'Layout');
     cy.get('#search').clear().type('copy');
-    // Copy several paths as, its sample, and Filedrawer's row with its Copy button.
-    cy.get('.r:visible').should('have.length', 3).last().should('contain', 'Filedrawer');
+    // Copy several paths as, its sample, Close the list after copying, and
+    // Filedrawer's row with its Copy button.
+    cy.get('.r:visible').should('have.length', 4).last().should('contain', 'Filedrawer');
     cy.get('#sample').should('be.visible');
     cy.get('#search').clear().type('menu bar icon');
     cy.get('.none-found').should('be.visible');

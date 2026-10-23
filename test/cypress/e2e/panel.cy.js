@@ -20,7 +20,9 @@ describe('the list', () => {
   });
 
   it('Cmd click and Shift click pick several, Copy Paths copies them in list order, Esc clears', () => {
-    cy.page('panel/index.html');
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = false;
+    });
     row('Screenshot earlier b.png').find('.info').click({ metaKey: true });
     row('Screenshot today a.png').find('.info').click({ shiftKey: true });
     cy.get('.row.sel').should('have.length', 3);
@@ -36,6 +38,27 @@ describe('the list', () => {
     cy.get('body').type('{esc}');
     cy.get('.row.sel').should('have.length', 0);
     cy.get('#selbar').should('not.be.visible');
+    cy.calls('hide').should('have.length', 0);
+  });
+
+  it('the list closes a moment after a copy, or stays with the switch off', () => {
+    cy.page('panel/index.html');
+    row('Screenshot yesterday.png').find('.info').click();
+    cy.calls('hide').should('have.length', 0);
+    cy.calls('hide').should('have.length', 1);
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = false;
+    });
+    row('Screenshot yesterday.png').find('.info').click();
+    cy.wait(800);
+    cy.calls('hide').should('have.length', 0);
+  });
+
+  it('a click in the list right after a copy keeps it open', () => {
+    cy.page('panel/index.html');
+    row('Screenshot yesterday.png').find('.info').click();
+    row('Screenshot today a.png').find('.info').click({ metaKey: true });
+    cy.wait(800);
     cy.calls('hide').should('have.length', 0);
   });
 
