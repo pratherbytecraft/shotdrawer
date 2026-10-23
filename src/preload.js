@@ -8,6 +8,7 @@ const on = (channel) => (fn) => {
 
 contextBridge.exposeInMainWorld('shotdrawer', {
   getState: () => ipcRenderer.invoke('state'),
+  onState: on('state'),
   onShown: on('panel:shown'),
   setHeight: (h) => ipcRenderer.send('panel:height', h),
   hide: () => ipcRenderer.send('panel:hide'),

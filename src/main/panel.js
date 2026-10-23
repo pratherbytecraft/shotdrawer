@@ -72,10 +72,15 @@ function hide() {
 
 // A click on the icon while the list is open closes it. The list loses
 // focus to that click first and hides itself, so a click right after a
-// hide counts as the closing click rather than opening it again.
+// hide counts as the closing click rather than opening it again. Returns
+// whether the list opened.
 function toggle(icon) {
   if (win && win.isVisible()) hide();
-  else if (Date.now() - hiddenAt > 250) show(icon);
+  else if (Date.now() - hiddenAt > 250) {
+    show(icon);
+    return true;
+  }
+  return false;
 }
 
 function setHeight(h, icon) {
@@ -83,4 +88,8 @@ function setHeight(h, icon) {
   if (win && win.isVisible() && icon) place(icon);
 }
 
-module.exports = { create, show, hide, toggle, setHeight };
+function send(channel, payload) {
+  if (win) win.webContents.send(channel, payload);
+}
+
+module.exports = { create, show, hide, toggle, setHeight, send };
