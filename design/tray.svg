@@ -1,0 +1,8 @@
+<!-- Shotdrawer's menu bar glyph, from mockups/icons.html (option C): the
+     viewfinder corners around a small hill line. Drawn on a 16 point grid
+     with a point of room on each side, in black, as a template image that
+     macOS tints for the menu bar. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1 18 18" fill="none" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M1.8 5V2.5a.7.7 0 0 1 .7-.7H5M11 1.8h2.5a.7.7 0 0 1 .7.7V5M14.2 11v2.5a.7.7 0 0 1-.7.7H11M5 14.2H2.5a.7.7 0 0 1-.7-.7V11"/>
+  <path d="M4.5 11l2.5-3 1.8 2 1.2-1.2 1.5 2.2"/>
+</svg>

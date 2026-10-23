@@ -1,0 +1,42 @@
+{
+  "name": "shotdrawer",
+  "version": "0.1.0",
+  "description": "A menu bar app for macOS that lists your recent screenshots and copies their paths with one click.",
+  "author": "Prather Bytecraft",
+  "license": "SEE LICENSE IN LICENSE",
+  "private": false,
+  "homepage": "https://github.com/pratherbytecraft/shotdrawer",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pratherbytecraft/shotdrawer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pratherbytecraft/shotdrawer/issues"
+  },
+  "os": [
+    "darwin"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "src/main/index.js",
+  "bin": {
+    "shotdrawer": "bin/shotdrawer.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "scripts",
+    "assets",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/shotdrawer.js --foreground",
+    "postinstall": "node scripts/fix-electron.js && node scripts/build-app.js",
+    "build-app": "node scripts/build-app.js"
+  },
+  "dependencies": {
+    "electron": "^33.2.1"
+  }
+}

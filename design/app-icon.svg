@@ -1,0 +1,16 @@
+<!-- Shotdrawer app icon, option C in sky (owner's pick, 2026-10-26). Same
+     ring and margin as Startbar's and Filedrawer's app-icon.svg, so the
+     badge sits at 82% of the canvas. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="ring" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="120" y2="120"><stop offset="0%" stop-color="#9fa8ff"/><stop offset="55%" stop-color="#5865F2"/><stop offset="100%" stop-color="#4c46d6"/></linearGradient>
+    <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="42" x2="0" y2="78"><stop offset="0%" stop-color="#a8e6ff"/><stop offset="100%" stop-color="#2f8cf0"/></linearGradient>
+  </defs>
+  <g transform="translate(60 60) scale(0.82) translate(-60 -60)">
+    <circle cx="60" cy="60" r="54" fill="#0b0e1a" stroke="url(#ring)" stroke-width="4"/>
+    <rect x="36" y="42" width="48" height="36" rx="3" fill="url(#sky)"/>
+    <circle cx="70.6" cy="53.5" r="4.7" fill="#fff" fill-opacity=".9"/>
+    <path d="M36 78 L52.3 60 L62.9 70.1 L69.6 64.3 L84 78 Z" fill="#0b0e1a" fill-opacity=".55"/>
+    <path d="M26 44V30h14M80 30h14v14M94 76v14H80M40 90H26V76" fill="none" stroke="#f5f7ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
