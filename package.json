@@ -35,9 +35,13 @@
     "start": "node bin/shotdrawer.js --foreground",
     "postinstall": "node scripts/fix-electron.js && node scripts/build-app.js",
     "build-app": "node scripts/build-app.js",
-    "test": "node --test test/unit/*.test.js"
+    "test": "node --test test/unit/*.test.js",
+    "test:pages": "cypress run --config-file test/cypress/cypress.config.js"
   },
   "dependencies": {
     "electron": "^33.2.1"
+  },
+  "devDependencies": {
+    "cypress": "14.5.4"
   }
 }
