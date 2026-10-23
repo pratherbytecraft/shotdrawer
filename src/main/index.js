@@ -179,24 +179,32 @@ function copied(file, text) {
 }
 
 // The right click menu on a screenshot. picked is the list of screenshots
-// picked together when this one is among them.
+// picked together when this one is among them; then the items act on all
+// of them, copies joined in the copy format. Show in stays with the one
+// clicked, since showing several needs control of Finder.
 function shotMenu(file, picked) {
-  const items = [];
-  if (picked.length > 1) {
-    items.push({ label: `Copy ${picked.length} Paths`, click: () => copied(file, copy.join(picked, settings.get().copyFormat)) }, { type: 'separator' });
-  }
-  items.push(
-    { label: 'Copy Path', click: () => copied(file, file) },
-    { label: 'Copy as file:// URL', click: () => copied(file, copy.fileUrl(file)) },
-    { label: 'Copy Filename', click: () => copied(file, copy.fileName(file)) },
+  const files = picked.length > 1 ? picked : [file];
+  const n = files.length > 1 ? `${files.length} ` : '';
+  const join = (list) => copy.join(list, settings.get().copyFormat);
+  Menu.buildFromTemplate([
+    { label: n ? `Copy ${n}Paths` : 'Copy Path', click: () => copied(file, join(files)) },
+    { label: n ? `Copy ${n}file:// URLs` : 'Copy as file:// URL', click: () => copied(file, join(files.map(copy.fileUrl))) },
+    { label: n ? `Copy ${n}Filenames` : 'Copy Filename', click: () => copied(file, join(files.map(copy.fileName))) },
     { type: 'separator' },
     { label: `Show in ${state().viewer}`, click: () => showIn(file) },
-    { label: 'Open', click: () => { panel.hide(); shell.openPath(file); } },
+    // Opened in one go, so pictures share one Preview window.
+    { label: n ? `Open ${n.trim()}` : 'Open', click: () => { panel.hide(); execFile('open', files, () => {}); } },
     { type: 'separator' },
-    { label: 'Remove from History', click: () => history.remove(file) && panel.send('state', state()) },
-    { label: 'Move to Trash', click: () => shell.trashItem(file).catch((err) => console.log(`Shotdrawer: ${file} wasn't moved to the Trash: ${err.message}`)).then(rescan) }
-  );
-  Menu.buildFromTemplate(items).popup({ window: panel.window() });
+    { label: n ? `Remove ${n}from History` : 'Remove from History', click: () => history.remove(files) && broadcast() },
+    { label: n ? `Move ${n}to Trash` : 'Move to Trash', click: () => trash(files) }
+  ]).popup({ window: panel.window() });
+}
+
+async function trash(files) {
+  for (const f of files) {
+    await shell.trashItem(f).catch((err) => console.log(`Shotdrawer: ${f} wasn't moved to the Trash: ${err.message}`));
+  }
+  rescan();
 }
 
 // Picks a new folder for the screenshot tool to save to, as a sheet on the
