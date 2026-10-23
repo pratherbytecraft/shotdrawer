@@ -8,53 +8,60 @@ const history = require('../../src/main/history');
 const shot = (name, at) => ({ path: `/s/${name}.png`, at });
 const all = () => true;
 
+const fresh = (extra = {}) => ({ clearedAt: null, removed: [], shots: [], ...extra });
+
 test('the first look takes the newest, cut to the size', () => {
   const found = [shot('a', 1), shot('b', 3), shot('c', 2)];
-  const { next, changed } = history.apply({ seenUpTo: null, shots: [] }, found, 2, all);
+  const { next, changed } = history.apply(fresh(), found, 2, all);
   assert.ok(changed);
   assert.deepStrictEqual(next.shots.map((s) => s.at), [3, 2]);
-  assert.strictEqual(next.seenUpTo, 3);
 });
 
-test('catches up on shots newer than the newest seen, nothing older', () => {
-  const last = { seenUpTo: 5, shots: [shot('e', 5), shot('d', 4)] };
-  const found = [shot('d', 4), shot('e', 5), shot('old', 3), shot('f', 6), shot('g', 7)];
+test('catches up on shots taken while closed', () => {
+  const last = fresh({ shots: [shot('e', 5), shot('d', 4)] });
+  const found = [shot('d', 4), shot('e', 5), shot('f', 6), shot('g', 7)];
   const { next } = history.apply(last, found, 20, all);
   assert.deepStrictEqual(next.shots.map((s) => s.at), [7, 6, 5, 4]);
-  assert.strictEqual(next.seenUpTo, 7);
+});
+
+test('a bigger size fills up from the folder', () => {
+  const found = [shot('a', 1), shot('b', 2), shot('c', 3), shot('d', 4)];
+  const small = history.apply(fresh(), found, 2, all).next;
+  assert.deepStrictEqual(small.shots.map((s) => s.at), [4, 3]);
+  const { next, changed } = history.apply(small, found, 20, all);
+  assert.ok(changed);
+  assert.deepStrictEqual(next.shots.map((s) => s.at), [4, 3, 2, 1]);
 });
 
 test('a screenshot taken out of the list stays out', () => {
-  // d was in the list and taken out; seenUpTo still covers it.
-  const last = { seenUpTo: 5, shots: [shot('e', 5)] };
+  const last = fresh({ removed: ['/s/d.png'], shots: [shot('e', 5)] });
   const { next, changed } = history.apply(last, [shot('d', 4), shot('e', 5)], 20, all);
   assert.ok(!changed);
   assert.deepStrictEqual(next.shots.map((s) => s.at), [5]);
 });
 
-test('nothing from before a Clear History comes back', () => {
-  const last = { seenUpTo: 100, shots: [] };
+test('nothing from before a Clear History comes back, even with room', () => {
+  const last = fresh({ clearedAt: 100 });
   const { next } = history.apply(last, [shot('a', 50), shot('b', 99), shot('c', 101)], 20, all);
   assert.deepStrictEqual(next.shots.map((s) => s.at), [101]);
 });
 
 test('files that are gone drop out', () => {
-  const last = { seenUpTo: 2, shots: [shot('b', 2), shot('a', 1)] };
+  const last = fresh({ shots: [shot('b', 2), shot('a', 1)] });
   const { next, changed } = history.apply(last, [], 20, (p) => p !== '/s/b.png');
   assert.ok(changed);
   assert.deepStrictEqual(next.shots.map((s) => s.at), [1]);
-  assert.strictEqual(next.seenUpTo, 2);
 });
 
 test('a smaller size cuts the oldest', () => {
-  const last = { seenUpTo: 3, shots: [shot('c', 3), shot('b', 2), shot('a', 1)] };
+  const last = fresh({ shots: [shot('c', 3), shot('b', 2), shot('a', 1)] });
   const { next, changed } = history.apply(last, [], 2, all);
   assert.ok(changed);
   assert.deepStrictEqual(next.shots.map((s) => s.at), [3, 2]);
 });
 
 test('nothing new is no change', () => {
-  const last = { seenUpTo: 2, shots: [shot('b', 2), shot('a', 1)] };
+  const last = fresh({ shots: [shot('b', 2), shot('a', 1)] });
   assert.ok(!history.apply(last, [shot('a', 1), shot('b', 2)], 20, all).changed);
 });
 
@@ -111,7 +118,7 @@ test('a broken screenshots.json starts an empty list', () => {
   const data = tempDir();
   fs.writeFileSync(path.join(data, 'screenshots.json'), '{ not json');
   assert.deepStrictEqual(history.init(data), []);
-  fs.writeFileSync(path.join(data, 'screenshots.json'), JSON.stringify({ seenUpTo: 'x', shots: [{ path: 3 }, { path: '/a.png', at: 1 }] }));
+  fs.writeFileSync(path.join(data, 'screenshots.json'), JSON.stringify({ clearedAt: 'x', removed: [4, '/b.png'], shots: [{ path: 3 }, { path: '/a.png', at: 1 }] }));
   assert.deepStrictEqual(history.init(data), [{ path: '/a.png', at: 1 }]);
 });
 
@@ -141,15 +148,14 @@ test('a screenshot taken out with remove stays out', async () => {
   const b = path.join(folder, 'Screenshot b.png');
   fs.writeFileSync(b, 'x');
   await history.scan(folder, 'Screenshot', 20);
-  // The newest one, so seenUpTo has to cover it on its own.
-  assert.ok(history.remove(b));
-  assert.ok(!history.remove(b));
+  assert.strictEqual(history.remove(b), 1);
+  assert.strictEqual(history.remove(b), 0);
   await history.scan(folder, 'Screenshot', 20);
   assert.deepStrictEqual(history.list().map((s) => s.path), [a]);
 });
 
 test('a renamed screenshot keeps its spot under the new name', () => {
-  const last = { seenUpTo: 2, shots: [shot('b', 2), shot('a', 1)] };
+  const last = fresh({ shots: [shot('b', 2), shot('a', 1)] });
   const renamed = new Map([['/s/a.png', '/s/bug report.png']]);
   const { next, changed } = history.apply(last, [], 20, (p) => p !== '/s/a.png', renamed);
   assert.ok(changed);

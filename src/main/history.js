@@ -1,24 +1,28 @@
 // The list of recent screenshots, newest first, kept in
 // ~/Library/Application Support/Shotdrawer/screenshots.json as
-// { seenUpTo, shots: [{ path, at }] }. `at` is when the file was made, in ms.
+// { clearedAt, removed: [path], shots: [{ path, at }] }. `at` is when the
+// file was made, in ms.
 //
-// seenUpTo is the newest screenshot ever taken in, or the last Clear
-// History when that's later. Only files made after it join the list, so a
-// screenshot cleared or taken out of the list doesn't come back on the next
-// rescan, and shots taken while Shotdrawer was closed are caught up on.
-// Before the first screenshot it's null and the folder's newest join.
+// The list is the newest screenshots in the folder, as many as the history
+// size, leaving out what came before the last Clear History (clearedAt) and
+// what was taken out by hand (removed). So shots taken while Shotdrawer was
+// closed are caught up on, and a bigger history size fills up from the
+// folder. Screenshots from a folder used before stay while they fit.
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 const { isScreenshot, EXTENSIONS } = require('./detector');
 
 let file = null;
-let data = { seenUpTo: null, shots: [] };
+let data = { clearedAt: null, removed: [], shots: [] };
+
+const REMOVED_KEPT = 500; // paths taken out by hand that are remembered
 
 function clean(saved) {
-  const out = { seenUpTo: null, shots: [] };
+  const out = { clearedAt: null, removed: [], shots: [] };
   if (!saved || typeof saved !== 'object') return out;
-  if (Number.isFinite(saved.seenUpTo)) out.seenUpTo = saved.seenUpTo;
+  if (Number.isFinite(saved.clearedAt)) out.clearedAt = saved.clearedAt;
+  if (Array.isArray(saved.removed)) out.removed = saved.removed.filter((p) => typeof p === 'string').slice(-REMOVED_KEPT);
   if (Array.isArray(saved.shots)) {
     out.shots = saved.shots.filter((s) => s && typeof s.path === 'string' && Number.isFinite(s.at)).map((s) => ({ path: s.path, at: s.at }));
   }
@@ -47,16 +51,16 @@ function list() {
 // The next list from the last one and the screenshots in the folder
 // (found, [{ path, at }]): screenshots renamed in place (renamed, old path
 // to new) keep their spot under the new name, files that are gone drop out,
-// files newer than seenUpTo join, newest first, cut to limit. Doesn't touch
-// the disk.
+// and the folder's screenshots made after the last clear and not taken out
+// fill it, newest first, cut to limit. Doesn't touch the disk.
 function apply(last, found, limit, exists, renamed = new Map()) {
   const kept = last.shots.map((s) => (renamed.has(s.path) ? { ...s, path: renamed.get(s.path) } : s)).filter((s) => exists(s.path));
   const known = new Set(kept.map((s) => s.path));
-  const fresh = found.filter((f) => !known.has(f.path) && (last.seenUpTo === null || f.at > last.seenUpTo));
+  const removed = new Set(last.removed);
+  const fresh = found.filter((f) => !known.has(f.path) && !removed.has(f.path) && (last.clearedAt === null || f.at > last.clearedAt));
   const shots = [...kept, ...fresh].sort((a, b) => b.at - a.at).slice(0, limit);
-  const seenUpTo = fresh.reduce((m, f) => (m === null || f.at > m ? f.at : m), last.seenUpTo);
-  const changed = shots.length !== last.shots.length || shots.some((s, i) => s.path !== last.shots[i].path) || seenUpTo !== last.seenUpTo;
-  return { next: { seenUpTo, shots }, changed };
+  const changed = shots.length !== last.shots.length || shots.some((s, i) => s.path !== last.shots[i].path);
+  return { next: { ...last, shots }, changed };
 }
 
 // The screenshots in a folder as [{ path, at }], and whether the folder
@@ -119,18 +123,23 @@ async function scan(folder, prefix, limit) {
   return { changed, access: seen.access };
 }
 
-// Takes one screenshot out of the list. seenUpTo stays, so it doesn't come
-// back on the next rescan.
-function remove(file) {
-  const shots = data.shots.filter((s) => s.path !== file);
-  if (shots.length === data.shots.length) return false;
-  data = { ...data, shots };
+// Takes screenshots out of the list and remembers them, so they don't come
+// back on the next rescan. Returns how many were in the list.
+function remove(files) {
+  const out = new Set([].concat(files));
+  const shots = data.shots.filter((s) => !out.has(s.path));
+  const gone = data.shots.length - shots.length;
+  if (!gone) return 0;
+  const removed = [...data.removed.filter((p) => !out.has(p)), ...out].slice(-REMOVED_KEPT);
+  data = { ...data, shots, removed };
   save();
-  return true;
+  return gone;
 }
 
+// Empties the list. What was in the folder before now stays out; the
+// clear time covers everything taken out by hand before it too.
 function clear(now = Date.now()) {
-  data = { seenUpTo: Math.max(data.seenUpTo ?? 0, now), shots: [] };
+  data = { clearedAt: Math.max(data.clearedAt ?? 0, now), removed: [], shots: [] };
   save();
 }
 
