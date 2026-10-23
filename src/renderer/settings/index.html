@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'">
+<title>Shotdrawer Settings</title>
+<link rel="stylesheet" href="settings.css">
+</head>
+<body>
+<div class="window">
+  <div class="side">
+    <input class="search" id="search" type="search" placeholder="Search" spellcheck="false">
+    <nav class="nav" id="nav">
+      <a data-page="general"><span class="ic" style="background:#8e8e93"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="2.3"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg></span>General</a>
+      <a data-page="look"><span class="ic" style="background:#5856d6"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5a6.5 6.5 0 1 0 0 13z"/><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>Look</a>
+      <a data-page="about"><span class="ic" style="background:#ff375f"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="6.3"/><path d="M8 7.3v4M8 4.8v.1"/></svg></span>About</a>
+    </nav>
+  </div>
+  <div class="main">
+    <div class="title" id="title">General</div>
+    <div class="content" id="content">
+      <div class="none-found">Nothing matches that.</div>
+
+      <section class="page" data-page="general">
+        <div class="gh">History</div>
+        <div class="group">
+          <div class="r"><div class="lab">Keep up to<div class="desc">Older ones drop off the list. The files stay where they are.</div></div>
+            <div class="stepper"><span id="size"></span><span class="arrows"><button id="size-up" title="More">▲</button><button id="size-down" title="Fewer">▼</button></span></div></div>
+        </div>
+        <div class="gh">Copying</div>
+        <div class="group">
+          <div class="r"><div class="lab">Copy several paths as<div class="desc">Used by Copy Paths when more than one is picked.</div></div>
+            <select id="format">
+              <option value="newline">One per line</option>
+              <option value="space">Space separated</option>
+              <option value="quoted">Space separated, shell quoted</option>
+            </select></div>
+          <div class="r sub"><div class="sample" id="sample"></div></div>
+        </div>
+        <div class="gh">Screenshot folder</div>
+        <div class="group">
+          <div class="r"><div class="lab">Where the Mac saves screenshots<div class="desc">Changing it here changes it for the screenshot tool too.</div>
+            <div class="pathline"><div class="path" id="folder"></div><span class="sp"></span><button class="btn" id="show-folder"></button><button class="btn" id="change-folder">Change…</button></div></div></div>
+          <div class="r" id="showin-row"><div class="lab">Show screenshots in<div class="desc">Where Show in Finder or Filedrawer takes you, from a screenshot or the folder button.</div></div>
+            <div class="seg2" id="showin"><button data-v="finder">Finder</button><button data-v="filedrawer">Filedrawer</button></div></div>
+        </div>
+        <div class="gh">Startup</div>
+        <div class="group">
+          <div class="r"><div class="lab">Open Shotdrawer at login<div class="desc" id="login-note" hidden>macOS is waiting for you to allow it in System Settings, under General, Login Items.</div></div>
+            <button class="toggle" id="login" aria-label="Open Shotdrawer at login"></button></div>
+        </div>
+      </section>
+
+      <section class="page" data-page="look">
+        <div class="gh">Look</div>
+        <div class="group">
+          <div class="r"><div class="lab">Layout<div class="desc">List shows the time and size beside each picture. Grid shows bigger pictures, three to a row.</div></div>
+            <div class="seg2" id="layout"><button data-v="list">List</button><button data-v="grid">Grid</button></div></div>
+        </div>
+      </section>
+
+      <section class="page" data-page="about">
+        <div class="about">
+          <svg class="logo" viewBox="0 0 120 120"><defs><linearGradient id="lr" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9fa8ff"/><stop offset=".55" stop-color="#5865F2"/><stop offset="1" stop-color="#4c46d6"/></linearGradient><linearGradient id="ls" x1="0" y1="42" x2="0" y2="78" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#a8e6ff"/><stop offset="1" stop-color="#2f8cf0"/></linearGradient></defs><circle cx="60" cy="60" r="54" fill="#0b0e1a" stroke="url(#lr)" stroke-width="5"/><rect x="36" y="42" width="48" height="36" rx="3" fill="url(#ls)"/><circle cx="70.6" cy="53.5" r="4.7" fill="#fff" fill-opacity=".9"/><path d="M36 78 L52.3 60 L62.9 70.1 L69.6 64.3 L84 78 Z" fill="#0b0e1a" fill-opacity=".55"/><path d="M26 44V30h14M80 30h14v14M94 76v14H80M40 90H26V76" fill="none" stroke="#f5f7ff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="name">Shotdrawer</div>
+          <div class="by">by Prather Bytecraft</div>
+          <div class="ver" id="version"></div>
+          <div class="links">
+            <button data-link="website">Website</button><button data-link="github">GitHub</button><button data-link="community">Community</button><button data-link="kofi">Ko-fi</button>
+          </div>
+        </div>
+        <div class="group" style="margin-top:10px">
+          <div class="r"><div class="lab">Updates<div class="desc" id="update-line"></div></div><button class="btn" id="check">Check Now</button></div>
+          <div class="r" id="update-row" hidden><div class="lab">Update with<div class="desc"><code id="update-cmd"></code></div></div><button class="btn" id="copy-cmd">Copy</button></div>
+        </div>
+        <div class="about"><div class="copy">© 2026 Prather Bytecraft. All rights reserved.</div></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="settings.js"></script>
+</body>
+</html>

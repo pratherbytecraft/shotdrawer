@@ -344,6 +344,7 @@ document.getElementById('confirm-clear').addEventListener('click', () => {
   api.clearHistory();
 });
 document.getElementById('quit').addEventListener('click', () => api.quit());
+document.getElementById('gear').addEventListener('click', () => api.openSettings());
 
 // The window takes the page's height.
 new ResizeObserver(() => api.setHeight(panel.offsetHeight)).observe(panel);

@@ -23,3 +23,22 @@ test('the history size stays within 5 to 100 in steps of 5', () => {
   assert.strictEqual(clean({ historySize: 23 }).historySize, 25);
   assert.deepStrictEqual(clean({ historySize: NaN }), {});
 });
+
+test('only the launch with no settings file counts as the first', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const settings = require('../../src/main/settings');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotdrawer-test-'));
+  try {
+    settings.init(dir);
+    assert.ok(settings.firstRun());
+    assert.ok(fs.existsSync(path.join(dir, 'settings.json')));
+    settings.init(dir);
+    assert.ok(!settings.firstRun());
+    settings.update({ layout: 'grid' });
+    assert.strictEqual(settings.init(dir).layout, 'grid');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

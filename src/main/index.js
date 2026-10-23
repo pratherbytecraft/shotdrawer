@@ -2,6 +2,7 @@
 // that touches the disk. Renderers only draw.
 const { app, ipcMain, clipboard, dialog, shell, Menu, nativeImage } = require('electron');
 const { execFile } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const tray = require('./tray');
 const panel = require('./panel');
@@ -12,6 +13,8 @@ const settings = require('./settings');
 const thumbs = require('./thumbs');
 const copy = require('./copy');
 const siblings = require('./siblings');
+const prefs = require('./prefs');
+const updates = require('./updates');
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
 // so it stays the same across updates (see scripts/build-app.js).
@@ -23,6 +26,17 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 app.setName('Shotdrawer');
+
+// The line that updates this copy, for the About page: Homebrew keeps what
+// it installs in its Cellar folder, npm in a node_modules folder.
+const UPDATE_COMMAND = /\/Cellar\/shotdrawer\//.test(fs.realpathSync(__dirname)) ? 'brew upgrade shotdrawer' : 'npm install -g shotdrawer';
+
+const LINKS = {
+  website: 'https://pratherbytecraft.com',
+  github: PKG.homepage,
+  community: 'https://www.reddit.com/r/pratherbytecraft/',
+  kofi: 'https://ko-fi.com/prathercc'
+};
 
 let where = { folder: null, prefix: 'Screenshot' };
 let access = null; // ok | missing | denied once the screenshot folder was looked at
@@ -39,8 +53,19 @@ function state() {
     access,
     shots: history.list(),
     settings: settings.get(),
-    viewer: viewer() ? 'Filedrawer' : 'Finder'
+    viewer: viewer() ? 'Filedrawer' : 'Finder',
+    filedrawer: !!siblings.appPath('filedrawer'),
+    loginItem: prefs.loginItem(),
+    update: updates.get(),
+    updateCommand: UPDATE_COMMAND
   };
+}
+
+// The list and the settings window draw from the same state.
+function broadcast() {
+  const now = state();
+  panel.send('state', now);
+  prefs.send('state', now);
 }
 
 // One scan at a time; a call during a scan runs one more after it.
@@ -66,7 +91,7 @@ async function rescan() {
       watcher.start(where.folder, rescan);
       again = true;
     }
-    if (res.changed || access !== was) panel.send('state', state());
+    if (res.changed || access !== was) broadcast();
   } while (again);
   scanning = false;
 }
@@ -79,7 +104,7 @@ function follow(next) {
     where = next;
     watcher.stop();
     access = null;
-    panel.send('state', state());
+    broadcast();
   }
   rescan();
 }
@@ -92,7 +117,7 @@ ipcMain.handle('shots:details', (_e, files) => thumbs.details(files));
 ipcMain.on('shot:copy', (_e, file) => clipboard.writeText(file));
 ipcMain.on('history:clear', () => {
   history.clear();
-  panel.send('state', state());
+  broadcast();
 });
 ipcMain.on('shots:copy', (_e, files) => clipboard.writeText(copy.join(files, settings.get().copyFormat)));
 ipcMain.on('shot:show', (_e, file) => showIn(file));
@@ -106,9 +131,23 @@ ipcMain.on('folder:menu', () => {
   const folder = where.folder;
   Menu.buildFromTemplate([
     { label: `Show in ${state().viewer}`, click: () => showIn(folder, { folder: true }) },
-    { label: 'Change Folder…', click: changeFolder }
+    { label: 'Change Folder…', click: () => changeFolder() }
   ]).popup({ window: panel.window() });
 });
+ipcMain.on('settings:open', (_e, page) => {
+  panel.hide();
+  prefs.show(page);
+});
+ipcMain.on('settings:set', (_e, patch) => settings.update(patch));
+ipcMain.on('login:set', (_e, on) => {
+  prefs.setLoginItem(on);
+  broadcast();
+});
+ipcMain.on('updates:check', () => updates.check(VERSION));
+ipcMain.on('text:copy', (_e, text) => clipboard.writeText(String(text)));
+ipcMain.on('link:open', (_e, key) => LINKS[key] && shell.openExternal(LINKS[key]));
+ipcMain.on('folder:show', () => showIn(where.folder, { folder: true }));
+ipcMain.on('folder:change', (e) => changeFolder(prefs.window && e.sender === prefs.window.webContents ? prefs.window : null));
 ipcMain.on('privacy:open', () => {
   shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
   panel.hide();
@@ -150,18 +189,19 @@ function shotMenu(file, picked) {
   Menu.buildFromTemplate(items).popup({ window: panel.window() });
 }
 
-// Picks a new folder for the screenshot tool to save to. The list closes
-// while the folder picker is up, it would close anyway once the picker
-// takes focus.
-async function changeFolder() {
+// Picks a new folder for the screenshot tool to save to, as a sheet on the
+// settings window or on its own from the list. The list closes while the
+// folder picker is up, it would close anyway once the picker takes focus.
+async function changeFolder(parent) {
   panel.hide();
   app.focus({ steal: true });
-  const res = await dialog.showOpenDialog({
+  const options = {
     title: 'Save Screenshots To',
     buttonLabel: 'Choose',
     defaultPath: where.folder,
     properties: ['openDirectory', 'createDirectory']
-  });
+  };
+  const res = await (parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options));
   if (res.canceled || !res.filePaths.length) return;
   try {
     await location.setFolder(res.filePaths[0]);
@@ -189,12 +229,35 @@ app.whenReady().then(async () => {
   const data = path.join(app.getPath('appData'), 'Shotdrawer');
   settings.init(data);
   history.init(data);
+  // Open at login is on from the first launch.
+  if (settings.firstRun()) prefs.setLoginItem(true);
   settings.onChange(() => {
     rescan();
-    panel.send('state', state());
+    broadcast();
   });
+  updates.onChange(broadcast);
+  updates.schedule(VERSION, () => true);
+  // Shotdrawer's menu bar is never shown, but its keys still work in the
+  // settings window: Cmd W closes it, Cmd Q quits, and the Edit keys work
+  // in the search box.
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {
+      role: 'appMenu',
+      submenu: [
+        { label: 'About Shotdrawer', click: () => prefs.show('about') },
+        { type: 'separator' },
+        { label: 'Settings…', accelerator: 'Cmd+,', click: () => prefs.show() },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    { role: 'windowMenu' }
+  ]));
   tray.create({
     toggle: () => panel.toggle(tray.bounds()) && opened(),
+    settings: () => prefs.show(),
     quit: () => app.quit()
   });
   panel.create();

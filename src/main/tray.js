@@ -13,11 +13,13 @@ function glyph() {
   return image;
 }
 
-// actions: { toggle, quit }
+// actions: { toggle, settings, quit }
 function create(actions) {
   tray = new Tray(glyph());
   tray.setToolTip('Shotdrawer');
   const menu = () => Menu.buildFromTemplate([
+    { label: 'Shotdrawer Settings…', click: actions.settings },
+    { type: 'separator' },
     { label: 'Quit Shotdrawer', click: actions.quit }
   ]);
   tray.on('click', (e) => {

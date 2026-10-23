@@ -19,6 +19,7 @@ const CHOICES = {
 
 let file = null;
 let current = { ...DEFAULTS };
+let fresh = false; // no settings file before this launch
 const listeners = new Set();
 
 // Only the keys Shotdrawer knows, each with a value it can use. Anything
@@ -43,6 +44,7 @@ function clean(saved) {
 function init(dir) {
   fs.mkdirSync(dir, { recursive: true });
   file = path.join(dir, 'settings.json');
+  fresh = !fs.existsSync(file);
   let saved = {};
   try {
     saved = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -50,6 +52,8 @@ function init(dir) {
     saved = {};
   }
   current = { ...DEFAULTS, ...clean(saved) };
+  // Written now, so only the very first launch counts as the first.
+  if (fresh) save();
   return current;
 }
 
@@ -57,9 +61,13 @@ function get() {
   return current;
 }
 
+function save() {
+  fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
+}
+
 function update(patch) {
   current = { ...current, ...clean(patch) };
-  fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
+  save();
   for (const fn of listeners) fn(current);
   return current;
 }
@@ -69,4 +77,4 @@ function onChange(fn) {
   return () => listeners.delete(fn);
 }
 
-module.exports = { DEFAULTS, init, get, update, onChange, clean };
+module.exports = { DEFAULTS, init, get, update, onChange, clean, firstRun: () => fresh };
