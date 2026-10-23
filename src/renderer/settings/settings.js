@@ -42,6 +42,9 @@ function draw() {
   $('size').textContent = `${s.historySize} screenshots`;
   $('size-up').disabled = s.historySize >= SIZES.max;
   $('size-down').disabled = s.historySize <= SIZES.min;
+  // Only with Startbar installed, whose tray has the Shotdrawer button.
+  $('menubar-section').hidden = !app.startbar;
+  $('menubar').value = s.menuBarIcon;
   $('format').value = s.copyFormat;
   $('sample').textContent = sample();
   $('folder').textContent = app.folder || '';
@@ -79,9 +82,11 @@ function runSearch() {
     g.querySelectorAll('.r').forEach((r) => {
       // A row's sub row (the copy sample) goes with the row above it.
       const owner = r.classList.contains('sub') ? r.previousElementSibling : r;
-      const miss = !!q && (owner.hidden || !owner.textContent.toLowerCase().includes(q));
+      // A row in a hidden part (say the Menu bar icon without Startbar) never counts.
+      const off = !!owner.closest('[hidden]');
+      const miss = !!q && (off || !owner.textContent.toLowerCase().includes(q));
       r.classList.toggle('miss', miss);
-      if (!miss && !r.hidden) shown++;
+      if (!miss && !off) shown++;
     });
     g.classList.toggle('empty', !!q && !shown);
     if (q) hits += shown;
@@ -106,6 +111,7 @@ $('search').addEventListener('input', runSearch);
 $('size-up').addEventListener('click', () => set({ historySize: Math.min(SIZES.max, app.settings.historySize + SIZES.step) }));
 $('size-down').addEventListener('click', () => set({ historySize: Math.max(SIZES.min, app.settings.historySize - SIZES.step) }));
 $('format').addEventListener('change', (e) => set({ copyFormat: e.target.value }));
+$('menubar').addEventListener('change', (e) => set({ menuBarIcon: e.target.value }));
 $('showin').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (b) set({ showIn: b.dataset.v });

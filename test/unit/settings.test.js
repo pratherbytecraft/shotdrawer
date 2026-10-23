@@ -11,6 +11,11 @@ test('keeps the copy format and where Show in opens', () => {
   assert.deepStrictEqual(clean({ copyFormat: 'csv', showIn: 'path finder' }), {});
 });
 
+test('keeps the menu bar icon choice', () => {
+  assert.deepStrictEqual(clean({ menuBarIcon: 'always' }), { menuBarIcon: 'always' });
+  assert.deepStrictEqual(clean({ menuBarIcon: 'never' }), {});
+});
+
 test('drops unknown keys and values of the wrong kind', () => {
   assert.deepStrictEqual(clean({ historySize: '40', layout: 'tiles', other: 1 }), {});
   assert.deepStrictEqual(clean(null), {});

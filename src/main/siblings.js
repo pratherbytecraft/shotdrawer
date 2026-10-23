@@ -6,7 +6,8 @@ const os = require('os');
 const path = require('path');
 
 const APPS = {
-  filedrawer: { id: 'com.pratherbytecraft.filedrawer', name: 'Filedrawer.app' }
+  filedrawer: { id: 'com.pratherbytecraft.filedrawer', name: 'Filedrawer.app' },
+  startbar: { id: 'com.pratherbytecraft.startbar', name: 'Startbar.app' }
 };
 const FRESH = 30 * 1000;
 
@@ -32,4 +33,4 @@ function appPath(key) {
   return found;
 }
 
-module.exports = { appPath };
+module.exports = { appPath, APPS };

@@ -63,6 +63,16 @@ describe('settings window', () => {
     cy.calls('set').should('deep.include', [{ showIn: 'finder' }]);
   });
 
+  it('the menu bar icon choice is there only with Startbar', () => {
+    cy.page('settings/index.html');
+    cy.get('#menubar-section').should('not.be.visible');
+    cy.page('settings/index.html', (state) => {
+      state.startbar = true;
+    });
+    cy.get('#menubar').should('be.visible').and('have.value', 'auto').select('always');
+    cy.calls('set').should('deep.include', [{ menuBarIcon: 'always' }]);
+  });
+
   it('the folder buttons and the login switch reach the main process', () => {
     cy.page('settings/index.html');
     cy.get('#folder').should('have.text', '/Users/test/Documents/Temp Screenshots');
@@ -114,6 +124,8 @@ describe('settings window', () => {
     cy.get('#search').clear().type('copy');
     cy.get('.r:visible').should('have.length', 2);
     cy.get('#sample').should('be.visible');
+    cy.get('#search').clear().type('menu bar icon');
+    cy.get('.none-found').should('be.visible');
     cy.get('#search').clear().type('nothing like this');
     cy.get('.none-found').should('be.visible');
   });

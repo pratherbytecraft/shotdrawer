@@ -50,6 +50,7 @@ function shotdrawerState() {
     settings: JSON.parse(JSON.stringify(DEFAULTS)),
     viewer: 'Finder',
     filedrawer: false,
+    startbar: false,
     loginItem: { on: true, needsApproval: false },
     update: { state: 'idle' },
     updateCommand: 'npm install -g shotdrawer'

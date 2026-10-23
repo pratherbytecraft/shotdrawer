@@ -5,6 +5,7 @@ const { Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 
 let tray = null;
+let given = null; // the actions, for making the icon again
 
 function glyph() {
   // Picks up trayTemplate@2x.png on its own for Retina screens.
@@ -15,6 +16,7 @@ function glyph() {
 
 // actions: { toggle, settings, quit }
 function create(actions) {
+  given = actions;
   tray = new Tray(glyph());
   tray.setToolTip('Shotdrawer');
   const menu = () => Menu.buildFromTemplate([
@@ -30,9 +32,20 @@ function create(actions) {
   return tray;
 }
 
-// Where the icon sits on screen, for placing the list under it.
+// Takes the icon out of the menu bar or puts it back. macOS has no way to
+// hide a menu bar icon, so it's removed and made again.
+function show(on) {
+  if (on && !tray && given) create(given);
+  if (!on && tray) {
+    tray.destroy();
+    tray = null;
+  }
+}
+
+// Where the icon sits on screen, for placing the list under it, or null
+// while it's out of the menu bar.
 function bounds() {
   return tray ? tray.getBounds() : null;
 }
 
-module.exports = { create, bounds };
+module.exports = { create, show, bounds };

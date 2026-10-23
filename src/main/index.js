@@ -1,6 +1,6 @@
 // Shotdrawer main process. Owns the menu bar icon, the list and everything
 // that touches the disk. Renderers only draw.
-const { app, ipcMain, clipboard, dialog, shell, Menu, nativeImage } = require('electron');
+const { app, ipcMain, clipboard, dialog, shell, Menu, nativeImage, screen } = require('electron');
 const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -16,6 +16,7 @@ const siblings = require('./siblings');
 const prefs = require('./prefs');
 const updates = require('./updates');
 const link = require('./link');
+const startbar = require('./startbar');
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
 // so it stays the same across updates (see scripts/build-app.js).
@@ -56,6 +57,7 @@ function state() {
     settings: settings.get(),
     viewer: viewer() ? 'Filedrawer' : 'Finder',
     filedrawer: !!siblings.appPath('filedrawer'),
+    startbar: !!siblings.appPath('startbar'),
     loginItem: prefs.loginItem(),
     update: updates.get(),
     updateCommand: UPDATE_COMMAND
@@ -218,8 +220,24 @@ function opened() {
   location.read().then(follow);
 }
 
+// Under the menu bar icon, or while it's out of the menu bar (Startbar
+// shows the button), under the menu bar near the right end.
+function iconSpot() {
+  const icon = tray.bounds();
+  if (icon) return icon;
+  const area = screen.getPrimaryDisplay().workArea;
+  return { x: area.x + area.width - 200, y: area.y, edge: 'top' };
+}
+
+// The menu bar icon shows unless Startbar shows its Shotdrawer button and
+// the General page leaves it to that.
+let startbarButton = false;
+function placeIcon() {
+  tray.show(settings.get().menuBarIcon === 'always' || !startbarButton);
+}
+
 function showList() {
-  panel.show(tray.bounds());
+  panel.show(iconSpot());
   opened();
 }
 
@@ -233,7 +251,7 @@ function openLink(url) {
   if (!res) return;
   // The button's own click can close the list before the link arrives, so
   // it gets a longer grace than a click on the menu bar icon.
-  if (panel.toggle(res.spot || tray.bounds(), 700)) opened();
+  if (panel.toggle(res.spot || iconSpot(), 700)) opened();
 }
 
 app.on('open-url', (e, url) => {
@@ -253,6 +271,7 @@ app.whenReady().then(async () => {
   if (settings.firstRun()) prefs.setLoginItem(true);
   settings.onChange(() => {
     rescan();
+    placeIcon();
     broadcast();
   });
   updates.onChange(broadcast);
@@ -276,9 +295,13 @@ app.whenReady().then(async () => {
     { role: 'windowMenu' }
   ]));
   tray.create({
-    toggle: () => panel.toggle(tray.bounds()) && opened(),
+    toggle: () => panel.toggle(iconSpot()) && opened(),
     settings: () => prefs.show(),
     quit: () => app.quit()
+  });
+  startbar.watch((showing) => {
+    startbarButton = showing;
+    placeIcon();
   });
   panel.create();
   ready = true;
