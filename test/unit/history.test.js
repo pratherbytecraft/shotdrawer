@@ -147,3 +147,29 @@ test('a screenshot taken out with remove stays out', async () => {
   await history.scan(folder, 'Screenshot', 20);
   assert.deepStrictEqual(history.list().map((s) => s.path), [a]);
 });
+
+test('a renamed screenshot keeps its spot under the new name', () => {
+  const last = { seenUpTo: 2, shots: [shot('b', 2), shot('a', 1)] };
+  const renamed = new Map([['/s/a.png', '/s/bug report.png']]);
+  const { next, changed } = history.apply(last, [], 20, (p) => p !== '/s/a.png', renamed);
+  assert.ok(changed);
+  assert.deepStrictEqual(next.shots.map((s) => s.path), ['/s/b.png', '/s/bug report.png']);
+});
+
+test('scan follows a screenshot renamed in its folder, to any name', async () => {
+  const data = tempDir();
+  const folder = tempDir();
+  history.init(data);
+  const a = path.join(folder, 'Screenshot a.png');
+  fs.writeFileSync(a, 'x');
+  fs.writeFileSync(path.join(folder, 'holiday.png'), 'x');
+  await history.scan(folder, 'Screenshot', 20);
+  const renamed = path.join(folder, 'bug report.png');
+  fs.renameSync(a, renamed);
+  assert.ok((await history.scan(folder, 'Screenshot', 20)).changed);
+  assert.deepStrictEqual(history.list().map((s) => s.path), [renamed]);
+  // Gone for real, it drops out.
+  fs.rmSync(renamed);
+  await history.scan(folder, 'Screenshot', 20);
+  assert.deepStrictEqual(history.list(), []);
+});

@@ -10,7 +10,7 @@
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
-const { isScreenshot } = require('./detector');
+const { isScreenshot, EXTENSIONS } = require('./detector');
 
 let file = null;
 let data = { seenUpTo: null, shots: [] };
@@ -45,10 +45,12 @@ function list() {
 }
 
 // The next list from the last one and the screenshots in the folder
-// (found, [{ path, at }]): files that are gone drop out, files newer than
-// seenUpTo join, newest first, cut to limit. Doesn't touch the disk.
-function apply(last, found, limit, exists) {
-  const kept = last.shots.filter((s) => exists(s.path));
+// (found, [{ path, at }]): screenshots renamed in place (renamed, old path
+// to new) keep their spot under the new name, files that are gone drop out,
+// files newer than seenUpTo join, newest first, cut to limit. Doesn't touch
+// the disk.
+function apply(last, found, limit, exists, renamed = new Map()) {
+  const kept = last.shots.map((s) => (renamed.has(s.path) ? { ...s, path: renamed.get(s.path) } : s)).filter((s) => exists(s.path));
   const known = new Set(kept.map((s) => s.path));
   const fresh = found.filter((f) => !known.has(f.path) && (last.seenUpTo === null || f.at > last.seenUpTo));
   const shots = [...kept, ...fresh].sort((a, b) => b.at - a.at).slice(0, limit);
@@ -75,13 +77,41 @@ async function found(folder, prefix) {
   return { access: 'ok', shots };
 }
 
+// Screenshots from the list that are gone from the folder, found again under
+// a new name. Renaming keeps when a file was made, so a picture in the folder
+// made at the same moment is the same screenshot renamed (often to a name
+// that doesn't start with Screenshot any more). Old path to new.
+async function renames(folder, missing) {
+  const out = new Map();
+  let names;
+  try {
+    names = await fsp.readdir(folder, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  const pictures = names.filter((e) => e.isFile() && !e.name.startsWith('.') && EXTENSIONS.has(path.extname(e.name).toLowerCase()));
+  const byAt = new Map();
+  await Promise.all(pictures.map(async (e) => {
+    const full = path.join(folder, e.name);
+    try {
+      byAt.set((await fsp.stat(full)).birthtimeMs, full);
+    } catch {
+      // gone between the listing and the look
+    }
+  }));
+  for (const s of missing) if (byAt.has(s.at)) out.set(s.path, byAt.get(s.at));
+  return out;
+}
+
 // Looks at the folder and brings the list up to date. Returns whether the
 // list changed and whether the folder could be read.
 async function scan(folder, prefix, limit) {
   const seen = await found(folder, prefix);
   // Without access every file in the folder looks gone; keep the list.
   if (seen.access === 'denied') return { changed: false, access: seen.access };
-  const { next, changed } = apply(data, seen.shots, limit, fs.existsSync);
+  const missing = data.shots.filter((s) => path.dirname(s.path) === folder && !fs.existsSync(s.path));
+  const renamed = missing.length ? await renames(folder, missing) : new Map();
+  const { next, changed } = apply(data, seen.shots, limit, fs.existsSync, renamed);
   if (changed) {
     data = next;
     save();
@@ -104,4 +134,4 @@ function clear(now = Date.now()) {
   save();
 }
 
-module.exports = { init, list, apply, found, scan, remove, clear };
+module.exports = { init, list, apply, found, renames, scan, remove, clear };
