@@ -103,7 +103,7 @@ async function rescan() {
 
 // Moves to the folder and prefix the screenshot tool uses now, and looks
 // at the folder again (which starts the watcher if it isn't running, say
-// for a folder that didn't exist yet).
+// for a folder that didn't exist yet). Resolves once that look is done.
 function follow(next) {
   if (next.folder !== where.folder || next.prefix !== where.prefix) {
     where = next;
@@ -111,7 +111,7 @@ function follow(next) {
     access = null;
     broadcast();
   }
-  rescan();
+  return rescan();
 }
 
 ipcMain.handle('state', () => state());
@@ -313,8 +313,12 @@ app.whenReady().then(async () => {
   panel.create();
   ready = true;
   waiting.splice(0).forEach(openLink);
-  follow(await location.read());
+  const firstLook = follow(await location.read());
   location.watch(() => where, follow);
+  // The very first launch opens the list once, so it's clear where
+  // Shotdrawer lives. It waits for the first look at the folder, since
+  // macOS's folder access prompt would take the focus and close it.
+  if (settings.firstRun()) firstLook.then(() => setTimeout(showList, 300));
 });
 
 // Opening Shotdrawer again (the shotdrawer command, or the app in Finder)
