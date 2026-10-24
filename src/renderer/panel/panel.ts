@@ -227,6 +227,7 @@ api.onShown(() => {
   lookKeys = false;
   picked.clear();
   anchor = null;
+  replayAt = lastPointer;
   render();
 });
 // A copy from the right click menu.
@@ -392,6 +393,7 @@ $('sel-clear').addEventListener('click', clearPicked);
 let tipTimer: number | undefined;
 let tipFor: string | null = null;
 body.addEventListener('mouseover', (e) => {
+  if (replayed(e)) return;
   const item = target(e).closest<HTMLElement>('[data-path]');
   // The row's buttons have tips of their own, and the big look shows the
   // name of a picture the pointer rests on.
@@ -471,7 +473,7 @@ function closeLook() {
 }
 
 body.addEventListener('mouseover', (e) => {
-  if (lookKeys || sweep) return;
+  if (lookKeys || sweep || replayed(e)) return;
   const item = target(e).closest<HTMLElement>('.th') && target(e).closest<HTMLElement>('[data-path]');
   clearTimeout(lookTimer);
   if (!item || !state.settings.bigLook) {
@@ -502,10 +504,17 @@ const itemOf = (file: string) => itemEls().find((el) => el.dataset.path === file
 // Only a pointer that really moved takes the spot back. The list scrolling
 // under a still pointer (to keep the ring in view) doesn't count.
 let lastPointer = '';
+// When the list opens, Chromium replays a mouseover at the last spot the
+// page saw the pointer. After dragging a picture out, or Esc with the
+// pointer on a picture, that spot is stale and the pointer is elsewhere,
+// so the tip and the big look wait for the pointer to really move.
+let replayAt: string | null = null;
+const replayed = (e: MouseEvent) => replayAt !== null && `${e.screenX},${e.screenY}` === replayAt;
 body.addEventListener('mousemove', (e) => {
   const at = `${e.screenX},${e.screenY}`;
   if (at === lastPointer) return;
   lastPointer = at;
+  replayAt = null;
   const item = target(e).closest<HTMLElement>('[data-path]');
   if (item) cursor = pathOf(item);
   if (keyed) {

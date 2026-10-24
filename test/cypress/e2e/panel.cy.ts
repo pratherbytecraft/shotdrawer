@@ -318,6 +318,20 @@ describe('the list', () => {
     cy.calls('look').should('have.length', 0);
   });
 
+  it('when the list opens, a hover replayed at the last spot the pointer was seen doesn\'t open the big look', () => {
+    cy.page('panel/index.html');
+    // The pointer was last seen on a picture, say before a drag out.
+    row('Screenshot today a.png').find('.th').trigger('mousemove', { screenX: 300, screenY: 200 });
+    cy.fake().then((api) => api.emit('shown'));
+    row('Screenshot today a.png').find('.th').trigger('mouseover', { screenX: 300, screenY: 200 });
+    cy.wait(800);
+    cy.calls('look').should('have.length', 0);
+    // Once the pointer really moves, resting on a picture works again.
+    row('Screenshot yesterday.png').find('.th').trigger('mousemove', { screenX: 300, screenY: 260 });
+    row('Screenshot yesterday.png').find('.th').trigger('mouseover', { screenX: 300, screenY: 260 });
+    cy.calls('look').should('have.length', 1).its(0).its(0).should('match', /yesterday\.png$/);
+  });
+
   it('Space opens the big look for the row the keys are on, the arrows follow, Esc closes it first', () => {
     cy.page('panel/index.html');
     cy.get('.row').should('have.length', 5);
