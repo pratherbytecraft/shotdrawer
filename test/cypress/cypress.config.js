@@ -27,8 +27,9 @@ function serve() {
 
 // What the main process sends as state, with every setting at its default
 // and five screenshots: two from today, one from yesterday, two earlier.
+// The defaults come from the build, which npm run test:pages makes first.
 function shotdrawerState() {
-  const { DEFAULTS } = require('../../src/main/settings');
+  const { DEFAULTS } = require('../../dist/main/settings');
   const folder = '/Users/test/Documents/Temp Screenshots';
   const now = new Date();
   const at = (daysAgo, hour, minute) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo, hour, minute).getTime();

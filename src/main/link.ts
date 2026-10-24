@@ -1,11 +1,17 @@
 // The shotdrawer:// link other apps open to show the list, registered in
-// Shotdrawer.app's Info.plist by scripts/build-app.js. Startbar's tray
+// Shotdrawer.app's Info.plist by scripts/build-app.ts. Startbar's tray
 // button opens shotdrawer://show?x=1240&y=820&edge=bottom with the top
 // center of the button in screen points, and the list opens just above it.
 // Without a spot, the list opens under the menu bar icon.
 
+export interface Spot {
+  x: number;
+  y: number;
+  edge: 'top' | 'bottom';
+}
+
 // { action: 'show', spot } for a link Shotdrawer knows, else null.
-function parse(url) {
+export function parse(url: string): { action: 'show'; spot: Spot | null } | null {
   let u;
   try {
     u = new URL(url);
@@ -21,5 +27,3 @@ function parse(url) {
   const edge = u.searchParams.get('edge') === 'top' ? 'top' : 'bottom';
   return { action, spot: { x: Math.round(x), y: Math.round(y), edge } };
 }
-
-module.exports = { parse };

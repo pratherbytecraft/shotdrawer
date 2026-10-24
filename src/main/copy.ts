@@ -1,29 +1,28 @@
 // What a copy puts on the clipboard. Several paths are joined in the copy
 // format picked in the settings: one per line, space separated, or space
 // separated with each path in single quotes for pasting into a shell.
-const path = require('path');
-const { pathToFileURL } = require('url');
+import path from 'path';
+import { pathToFileURL } from 'url';
+import type { CopyFormat } from '../shared/types';
 
-const FORMATS = ['newline', 'space', 'quoted'];
+export const FORMATS: CopyFormat[] = ['newline', 'space', 'quoted'];
 
 // A path in single quotes, with any single quote in it closed, escaped and
 // opened again, so a shell reads it back exactly.
-function quote(p) {
+export function quote(p: string) {
   return `'${p.replace(/'/g, "'\\''")}'`;
 }
 
-function join(paths, format) {
+export function join(paths: string[], format: string) {
   if (format === 'space') return paths.join(' ');
   if (format === 'quoted') return paths.map(quote).join(' ');
   return paths.join('\n');
 }
 
-function fileUrl(p) {
+export function fileUrl(p: string) {
   return pathToFileURL(p).href;
 }
 
-function fileName(p) {
+export function fileName(p: string) {
   return path.basename(p);
 }
-
-module.exports = { FORMATS, quote, join, fileUrl, fileName };

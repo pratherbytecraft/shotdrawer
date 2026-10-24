@@ -1,27 +1,29 @@
 // Shotdrawer main process. Owns the menu bar icon, the list and everything
 // that touches the disk. Renderers only draw.
-const { app, ipcMain, clipboard, dialog, shell, Menu, nativeImage, screen } = require('electron');
-const { execFile } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const tray = require('./tray');
-const panel = require('./panel');
-const location = require('./location');
-const history = require('./history');
-const watcher = require('./watcher');
-const settings = require('./settings');
-const thumbs = require('./thumbs');
-const copy = require('./copy');
-const siblings = require('./siblings');
-const prefs = require('./prefs');
-const updates = require('./updates');
-const link = require('./link');
-const startbar = require('./startbar');
-const look = require('./look');
+import { app, clipboard, dialog, shell, Menu, nativeImage, screen, type BrowserWindow, type OpenDialogOptions } from 'electron';
+import { execFile } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import * as ipc from './ipc';
+import * as tray from './tray';
+import * as panel from './panel';
+import * as location from './location';
+import * as history from './history';
+import * as watcher from './watcher';
+import * as settings from './settings';
+import * as thumbs from './thumbs';
+import * as copy from './copy';
+import * as siblings from './siblings';
+import * as prefs from './prefs';
+import * as updates from './updates';
+import * as link from './link';
+import * as startbar from './startbar';
+import * as look from './look';
+import type { Access, LinkKey, State } from '../shared/types';
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
-// so it stays the same across updates (see scripts/build-app.js).
-const PKG = require('../../package.json');
+// so it stays the same across updates (see scripts/build-app.ts).
+import PKG from '../../package.json';
 const VERSION = PKG.version;
 
 if (!app.requestSingleInstanceLock()) {
@@ -35,22 +37,22 @@ app.setName('Shotdrawer');
 const BREW = /\/Cellar\/shotdrawer\//.test(fs.realpathSync(__dirname));
 const UPDATE_COMMAND = BREW ? 'brew upgrade shotdrawer' : 'npm install -g shotdrawer';
 
-const LINKS = {
+const LINKS: Record<LinkKey, string> = {
   website: 'https://pratherbytecraft.com',
   github: PKG.homepage,
   community: 'https://www.reddit.com/r/pratherbytecraft/',
   kofi: 'https://ko-fi.com/prathercc'
 };
 
-let where = { folder: null, prefix: 'Screenshot' };
-let access = null; // ok | missing | denied once the screenshot folder was looked at
+let where: { folder: string | null; prefix: string } = { folder: null, prefix: 'Screenshot' };
+let access: Access | null = null; // set once the screenshot folder was looked at
 
 // Filedrawer when it's installed and picked for Show in, else null for Finder.
 function viewer() {
   return settings.get().showIn === 'filedrawer' ? siblings.appPath('filedrawer') : null;
 }
 
-function state() {
+function state(): State {
   return {
     version: VERSION,
     folder: where.folder,
@@ -79,7 +81,8 @@ let scanning = false;
 let again = false;
 
 async function rescan() {
-  if (!where.folder) return;
+  const folder = where.folder;
+  if (!folder) return;
   if (scanning) {
     again = true;
     return;
@@ -88,13 +91,13 @@ async function rescan() {
   do {
     again = false;
     const was = access;
-    const res = await history.scan(where.folder, where.prefix, settings.get().historySize);
+    const res = await history.scan(folder, where.prefix, settings.get().historySize);
     access = res.access;
     // The watcher starts once the folder can be read. One started before
     // macOS gave access to a folder in Documents or on the Desktop never
     // hears a thing. Files made while it starts are caught by one more scan.
     if (access === 'ok' && (was !== 'ok' || !watcher.active())) {
-      watcher.start(where.folder, rescan);
+      watcher.start(folder, rescan);
       again = true;
     }
     if (res.changed || access !== was) broadcast();
@@ -105,7 +108,7 @@ async function rescan() {
 // Moves to the folder and prefix the screenshot tool uses now, and looks
 // at the folder again (which starts the watcher if it isn't running, say
 // for a folder that didn't exist yet). Resolves once that look is done.
-function follow(next) {
+function follow(next: location.Where) {
   if (next.folder !== where.folder || next.prefix !== where.prefix) {
     where = next;
     watcher.stop();
@@ -115,71 +118,74 @@ function follow(next) {
   return rescan();
 }
 
-ipcMain.handle('state', () => state());
-ipcMain.on('panel:height', (_e, h) => panel.setHeight(h));
-ipcMain.on('panel:hide', () => panel.hide());
-ipcMain.on('app:quit', () => app.quit());
-ipcMain.handle('shots:details', (_e, files) => thumbs.details(files));
-ipcMain.on('shot:copy', (_e, file) => clipboard.writeText(file));
-ipcMain.on('history:unremove', (_e, files) => {
+ipc.handle('state', () => state());
+ipc.on('panel:height', (_e, h) => panel.setHeight(h));
+ipc.on('panel:hide', () => panel.hide());
+ipc.on('app:quit', () => app.quit());
+ipc.handle('shots:details', (_e, files) => thumbs.details(files));
+ipc.on('shot:copy', (_e, file) => clipboard.writeText(file));
+ipc.on('history:unremove', (_e, files) => {
   history.unremove(files);
   rescan();
 });
-ipcMain.on('history:clear', () => {
+ipc.on('history:clear', () => {
   history.clear();
   broadcast();
 });
-ipcMain.on('shots:copy', (_e, files) => clipboard.writeText(copy.join(files, settings.get().copyFormat)));
-ipcMain.on('shot:show', (_e, file) => showIn(file));
-ipcMain.on('shot:menu', (_e, file, picked) => shotMenu(file, picked));
-ipcMain.on('shots:trash', (_e, files) => trash(files));
+ipc.on('shots:copy', (_e, files) => clipboard.writeText(copy.join(files, settings.get().copyFormat)));
+ipc.on('shot:show', (_e, file) => showIn(file));
+ipc.on('shot:menu', (_e, file, picked) => shotMenu(file, picked));
+ipc.on('shots:trash', (_e, files) => trash(files));
 // The big look beside the list. The row comes in the list's own points.
-ipcMain.on('look:show', (_e, file, row, keys) => {
+ipc.on('look:show', (_e, file, row, keys) => {
   const list = panel.window();
   if (!list || !list.isVisible()) return;
   const b = list.getBounds();
   look.show(file, { x: b.x + row.x, y: b.y + row.y, width: row.width, height: row.height }, b, keys).catch(() => look.hide());
 });
-ipcMain.on('look:hide', () => look.hide());
-ipcMain.on('shots:drag', (e, files, picture) => {
+ipc.on('look:hide', () => look.hide());
+ipc.on('shots:drag', (e, files, picture) => {
   let icon = picture ? nativeImage.createFromDataURL(picture) : null;
   if (!icon || icon.isEmpty()) icon = nativeImage.createFromPath(path.join(__dirname, '..', '..', 'assets', 'Shotdrawer.icns'));
   e.sender.startDrag({ file: files[0], files, icon: icon.resize({ width: 64 }) });
 });
-ipcMain.on('folder:menu', () => {
+ipc.on('folder:menu', () => {
   const folder = where.folder;
   Menu.buildFromTemplate([
-    { label: `Show in ${state().viewer}`, click: () => showIn(folder, { folder: true }) },
+    { label: `Show in ${state().viewer}`, click: () => folder && showIn(folder, { folder: true }) },
     { label: 'Change Folder…', click: () => changeFolder() }
-  ]).popup({ window: panel.window() });
+  ]).popup({ window: panel.window() ?? undefined });
 });
-ipcMain.on('settings:open', (_e, page) => {
+ipc.on('settings:open', (_e, page) => {
   panel.hide();
   prefs.show(page);
 });
-ipcMain.on('settings:set', (_e, patch) => settings.update(patch));
-ipcMain.on('login:set', (_e, on) => {
+ipc.on('settings:set', (_e, patch) => settings.update(patch));
+ipc.on('login:set', (_e, on) => {
   prefs.setLoginItem(on);
   broadcast();
 });
-ipcMain.on('updates:check', () => updates.check(VERSION));
-ipcMain.on('text:copy', (_e, text) => clipboard.writeText(String(text)));
-ipcMain.on('link:open', (_e, key) => LINKS[key] && shell.openExternal(LINKS[key]));
+ipc.on('updates:check', () => updates.check(VERSION));
+ipc.on('text:copy', (_e, text) => clipboard.writeText(String(text)));
+ipc.on('link:open', (_e, key) => LINKS[key] && shell.openExternal(LINKS[key]));
 // Starts one of the other apps, or brings it forward when it's running.
-ipcMain.on('sibling:open', (_e, key) => {
+ipc.on('sibling:open', (_e, key) => {
   const at = siblings.APPS[key] && siblings.appPath(key);
   if (at) execFile('open', ['-a', at], (err) => err && console.log(`Shotdrawer: ${key} didn't open: ${err.message}`));
 });
-ipcMain.on('folder:show', () => showIn(where.folder, { folder: true }));
-ipcMain.on('folder:change', (e) => changeFolder(prefs.window && e.sender === prefs.window.webContents ? prefs.window : null));
-ipcMain.on('privacy:open', () => {
+ipc.on('folder:show', () => where.folder && showIn(where.folder, { folder: true }));
+ipc.on('folder:change', (e) => {
+  const win = prefs.window();
+  changeFolder(win && e.sender === win.webContents ? win : null);
+});
+ipc.on('privacy:open', () => {
   shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
   panel.hide();
 });
 
 // Shows a screenshot picked in its folder, or a folder itself, in
 // Filedrawer when it's picked and installed, else in Finder.
-function showIn(file, { folder = false } = {}) {
+function showIn(file: string, { folder = false } = {}) {
   panel.hide();
   const fd = viewer();
   if (fd) execFile('open', ['-a', fd, file], (err) => err && (folder ? shell.openPath(file) : shell.showItemInFolder(file)));
@@ -187,7 +193,7 @@ function showIn(file, { folder = false } = {}) {
   else shell.showItemInFolder(file);
 }
 
-function copied(file, text) {
+function copied(file: string, text: string) {
   clipboard.writeText(text);
   panel.send('copied', file);
 }
@@ -196,10 +202,10 @@ function copied(file, text) {
 // picked together when this one is among them; then the items act on all
 // of them, copies joined in the copy format. Show in stays with the one
 // clicked, since showing several needs control of Finder.
-function shotMenu(file, picked) {
+function shotMenu(file: string, picked: string[]) {
   const files = picked.length > 1 ? picked : [file];
   const n = files.length > 1 ? `${files.length} ` : '';
-  const join = (list) => copy.join(list, settings.get().copyFormat);
+  const join = (list: string[]) => copy.join(list, settings.get().copyFormat);
   Menu.buildFromTemplate([
     { label: n ? `Copy ${n}Paths` : 'Copy Path', click: () => copied(file, join(files)) },
     { label: n ? `Copy ${n}file:// URLs` : 'Copy as file:// URL', click: () => copied(file, join(files.map(copy.fileUrl))) },
@@ -211,19 +217,19 @@ function shotMenu(file, picked) {
     { type: 'separator' },
     { label: n ? `Remove ${n}from History` : 'Remove from History', click: () => removeFromHistory(files) },
     { label: n ? `Move ${n}to Trash` : 'Move to Trash', click: () => trash(files) }
-  ]).popup({ window: panel.window() });
+  ]).popup({ window: panel.window() ?? undefined });
 }
 
 // Takes screenshots out of the list, and the list offers an Undo. The next
 // older screenshot in the folder moves up into the free spot.
-function removeFromHistory(files) {
+function removeFromHistory(files: string[]) {
   if (!history.remove(files)) return;
   broadcast();
   panel.send('removed', files);
   rescan();
 }
 
-async function trash(files) {
+async function trash(files: string[]) {
   for (const f of files) {
     await shell.trashItem(f).catch((err) => console.log(`Shotdrawer: ${f} wasn't moved to the Trash: ${err.message}`));
   }
@@ -233,13 +239,13 @@ async function trash(files) {
 // Picks a new folder for the screenshot tool to save to, as a sheet on the
 // settings window or on its own from the list. The list closes while the
 // folder picker is up, it would close anyway once the picker takes focus.
-async function changeFolder(parent) {
+async function changeFolder(parent?: BrowserWindow | null) {
   panel.hide();
   app.focus({ steal: true });
-  const options = {
+  const options: OpenDialogOptions = {
     title: 'Save Screenshots To',
     buttonLabel: 'Choose',
-    defaultPath: where.folder,
+    defaultPath: where.folder ?? undefined,
     properties: ['openDirectory', 'createDirectory']
   };
   const res = await (parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options));
@@ -247,7 +253,7 @@ async function changeFolder(parent) {
   try {
     await location.setFolder(res.filePaths[0]);
   } catch (err) {
-    console.log(`Shotdrawer: the screenshot folder couldn't be changed: ${err.message}`);
+    console.log(`Shotdrawer: the screenshot folder couldn't be changed: ${(err as Error).message}`);
   }
   follow(await location.read());
 }
@@ -260,7 +266,7 @@ function opened() {
 
 // Under the menu bar icon, or while it's out of the menu bar (Startbar
 // shows the button), under the menu bar near the right end.
-function iconSpot() {
+function iconSpot(): panel.Spot {
   const icon = tray.bounds();
   if (icon) return icon;
   const area = screen.getPrimaryDisplay().workArea;
@@ -282,9 +288,9 @@ function showList() {
 // A shotdrawer:// link from another app (Startbar's tray button). Links that
 // come before Shotdrawer is ready wait for it.
 let ready = false;
-const waiting = [];
+const waiting: string[] = [];
 
-function openLink(url) {
+function openLink(url: string) {
   const res = link.parse(url);
   if (!res) return;
   // The button's own click can close the list before the link arrives, so
@@ -333,7 +339,9 @@ app.whenReady().then(async () => {
     { role: 'windowMenu' }
   ]));
   tray.create({
-    toggle: () => panel.toggle(iconSpot()) && opened(),
+    toggle: () => {
+      if (panel.toggle(iconSpot())) opened();
+    },
     settings: () => prefs.show(),
     quit: () => app.quit()
   });

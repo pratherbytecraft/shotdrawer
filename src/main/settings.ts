@@ -1,10 +1,11 @@
 // Settings live in ~/Library/Application Support/Shotdrawer/settings.json.
 // Missing keys fall back to the defaults, so a settings file from an older
 // version keeps working after an update.
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import type { Settings } from '../shared/types';
 
-const DEFAULTS = Object.freeze({
+export const DEFAULTS: Readonly<Settings> = Object.freeze({
   historySize: 20, // how many screenshots the list keeps, 5 to 100 in steps of 5
   layout: 'list', // list | grid
   copyFormat: 'newline', // newline | space | quoted: how several paths are joined
@@ -14,30 +15,31 @@ const DEFAULTS = Object.freeze({
   bigLook: true // the big look opens when the pointer rests on a picture (Space always opens it)
 });
 
-const CHOICES = {
+const CHOICES: Partial<Record<keyof Settings, readonly string[]>> = {
   layout: ['list', 'grid'],
   copyFormat: ['newline', 'space', 'quoted'],
   showIn: ['filedrawer', 'finder'],
   menuBarIcon: ['auto', 'always']
 };
 
-let file = null;
-let current = { ...DEFAULTS };
+let file: string | null = null;
+let current: Settings = { ...DEFAULTS };
 let fresh = false; // no settings file before this launch
-const listeners = new Set();
+const listeners = new Set<(settings: Settings) => void>();
 
 // Only the keys Shotdrawer knows, each with a value it can use. Anything
 // else, from a hand-edited file say, falls back to the default.
-function clean(saved) {
-  const out = {};
+export function clean(saved: unknown): Partial<Settings> {
+  const out: Record<string, unknown> = {};
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return out;
-  for (const key of Object.keys(DEFAULTS)) {
-    const v = saved[key];
+  for (const key of Object.keys(DEFAULTS) as (keyof Settings)[]) {
+    const v = (saved as Record<string, unknown>)[key];
     if (typeof v !== typeof DEFAULTS[key]) continue;
-    if (CHOICES[key] && !CHOICES[key].includes(v)) continue;
+    const choices = CHOICES[key];
+    if (choices && !choices.includes(v as string)) continue;
     if (key === 'historySize') {
       if (!Number.isFinite(v)) continue;
-      out[key] = Math.min(100, Math.max(5, Math.round(v / 5) * 5));
+      out[key] = Math.min(100, Math.max(5, Math.round((v as number) / 5) * 5));
       continue;
     }
     out[key] = v;
@@ -45,7 +47,7 @@ function clean(saved) {
   return out;
 }
 
-function init(dir) {
+export function init(dir: string) {
   fs.mkdirSync(dir, { recursive: true });
   file = path.join(dir, 'settings.json');
   fresh = !fs.existsSync(file);
@@ -61,24 +63,24 @@ function init(dir) {
   return current;
 }
 
-function get() {
+export function get() {
   return current;
 }
 
 function save() {
-  fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
+  if (file) fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
 }
 
-function update(patch) {
+export function update(patch: unknown) {
   current = { ...current, ...clean(patch) };
   save();
   for (const fn of listeners) fn(current);
   return current;
 }
 
-function onChange(fn) {
+export function onChange(fn: (settings: Settings) => void) {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
 
-module.exports = { DEFAULTS, init, get, update, onChange, clean, firstRun: () => fresh };
+export const firstRun = () => fresh;

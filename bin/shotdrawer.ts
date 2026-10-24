@@ -6,15 +6,16 @@
 // Shotdrawer.app is opened through Launch Services (`open`), not run
 // directly, so macOS treats it as its own app and asks for folder access in
 // its name.
-const { spawn, spawnSync } = require('child_process');
-const path = require('path');
+import { spawn, spawnSync } from 'child_process';
+import path from 'path';
+import { appPath, build, BUNDLE_ID } from '../scripts/build-app';
+import { fix } from '../scripts/fix-electron';
 
 if (process.platform !== 'darwin') {
   console.error('Shotdrawer runs on macOS only.');
   process.exit(1);
 }
 
-const { appPath, build, BUNDLE_ID } = require('../scripts/build-app');
 const foreground = process.argv.slice(2).includes('--foreground');
 
 const env = { ...process.env };
@@ -28,7 +29,9 @@ function terminalPath() {
 
 // Fallback when the bundle wasn't built: plain Electron, shown as Electron.
 function runElectron() {
-  const electron = require('electron'); // the path to the Electron binary when required from Node
+  // The path to the Electron binary when required from Node. Required here,
+  // not imported, since it throws while Electron's install is unfinished.
+  const electron: string = require('electron');
   const child = spawn(electron, [path.join(__dirname, '..', '..')], {
     detached: !foreground,
     stdio: foreground ? 'inherit' : 'ignore',
@@ -41,7 +44,7 @@ function runElectron() {
   }
 }
 
-function runBundle(bundle) {
+function runBundle(bundle: string) {
   const openArgs = ['-a', bundle];
   const tty = foreground ? terminalPath() : null;
   if (tty) openArgs.unshift('-W', '--stdout', tty, '--stderr', tty);
@@ -63,7 +66,7 @@ function runBundle(bundle) {
   let bundle = appPath();
   if (!bundle) {
     console.log('Shotdrawer: setting up Shotdrawer.app, this takes a moment the first time.');
-    await require('../scripts/fix-electron').fix({ quiet: true });
+    await fix({ quiet: true });
     build({ quiet: true });
     bundle = appPath();
   }

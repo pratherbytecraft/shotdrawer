@@ -1,14 +1,14 @@
 // Watches the screenshot folder and calls back once things settle. Node's
 // fs.watch uses FSEvents for a folder on macOS; it says something changed,
 // not what, so the callback rescans.
-const fs = require('fs');
+import fs from 'fs';
 
 const SETTLE = 300; // ms
 
-let watcher = null;
-let timer = null;
+let watcher: fs.FSWatcher | null = null;
+let timer: NodeJS.Timeout | undefined;
 
-function start(folder, onChange) {
+export function start(folder: string, onChange: () => void) {
   stop();
   try {
     watcher = fs.watch(folder, () => {
@@ -25,10 +25,10 @@ function start(folder, onChange) {
   }
 }
 
-function stop() {
+export function stop() {
   clearTimeout(timer);
   if (watcher) watcher.close();
   watcher = null;
 }
 
-module.exports = { start, stop, active: () => !!watcher };
+export const active = () => !!watcher;

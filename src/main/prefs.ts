@@ -1,10 +1,12 @@
 // The settings window, and what its pages need from the Mac: open at login.
-const { app, BrowserWindow } = require('electron');
-const path = require('path');
+import { app, BrowserWindow } from 'electron';
+import path from 'path';
+import * as ipc from './ipc';
+import type { Events, LoginItem, SettingsPage } from '../shared/types';
 
-let win = null;
+let win: BrowserWindow | null = null;
 
-function loginItem() {
+export function loginItem(): LoginItem {
   try {
     const { status } = app.getLoginItemSettings({ type: 'mainAppService' });
     return { on: status === 'enabled' || status === 'requires-approval', needsApproval: status === 'requires-approval' };
@@ -13,21 +15,21 @@ function loginItem() {
   }
 }
 
-function setLoginItem(on) {
+export function setLoginItem(on: boolean) {
   try {
     app.setLoginItemSettings({ openAtLogin: !!on, type: 'mainAppService' });
   } catch (err) {
-    console.log(`Shotdrawer: the login item couldn't be changed: ${err.message}`);
+    console.log(`Shotdrawer: the login item couldn't be changed: ${(err as Error).message}`);
   }
 }
 
 // Shotdrawer has no Dock icon, so the window is pulled in front of the app
 // that's in use.
-function show(page) {
+export function show(page?: SettingsPage) {
   if (win && !win.isDestroyed()) {
-    if (page) win.webContents.send('settings:page', page);
+    if (page) ipc.send(win.webContents, 'settings:page', page);
   } else {
-    win = new BrowserWindow({
+    const made = new BrowserWindow({
       width: 760,
       height: 560,
       minWidth: 640,
@@ -39,15 +41,16 @@ function show(page) {
       fullscreenable: false,
       webPreferences: { preload: path.join(__dirname, '..', 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true }
     });
-    win.loadFile(path.join(__dirname, '..', 'renderer', 'settings', 'index.html'), page ? { query: { page } } : undefined);
-    win.once('ready-to-show', () => {
-      win.show();
+    win = made;
+    made.loadFile(path.join(__dirname, '..', 'renderer', 'settings', 'index.html'), page ? { query: { page } } : undefined);
+    made.once('ready-to-show', () => {
+      made.show();
       app.focus({ steal: true });
     });
-    win.on('closed', () => {
+    made.on('closed', () => {
       win = null;
     });
-    return win;
+    return made;
   }
   win.show();
   app.focus({ steal: true });
@@ -55,8 +58,8 @@ function show(page) {
   return win;
 }
 
-function send(channel, payload) {
-  if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+export function send<K extends keyof Events>(channel: K, ...payload: ipc.Payload<K>) {
+  if (win && !win.isDestroyed()) ipc.send(win.webContents, channel, ...payload);
 }
 
-module.exports = { show, send, loginItem, setLoginItem, get window() { return win; } };
+export const window = () => win;
