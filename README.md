@@ -2,10 +2,19 @@
 
 A menu bar app for macOS that lists your recent screenshots. Click one and its path is copied, ready to paste into Terminal, a chat or an upload box. Free to use.
 
+![The Shotdrawer list](https://raw.githubusercontent.com/pratherbytecraft/shotdrawer/main/docs/screenshots/list.png)
+
 ## Install
 
 ```
 npm install -g shotdrawer
+shotdrawer
+```
+
+Or with Homebrew.
+
+```
+brew install pratherbytecraft/tap/shotdrawer
 shotdrawer
 ```
 
@@ -17,27 +26,41 @@ Shotdrawer needs Node 18 or newer. The install also adds Shotdrawer to the Appli
 npm uninstall -g shotdrawer
 ```
 
-Then move Shotdrawer from the Applications folder in your home folder to the Trash.
+Or `brew uninstall shotdrawer` if you installed it with Homebrew. Then move Shotdrawer from the Applications folder in your home folder to the Trash.
 
 ## What it does
 
 Click the viewfinder icon in the menu bar to open the list. The newest screenshots are at the top, grouped under Today, Yesterday and Earlier, each with its time and size. Hold the pointer on one to see its file name. Click one and its path is copied.
 
+Hold the pointer on a picture for about half a second, or press Space, to see it large next to the list. The arrow keys move between pictures while it's open and Esc closes it.
+
+![A picture shown large next to the list](https://raw.githubusercontent.com/pratherbytecraft/shotdrawer/main/docs/screenshots/big-look.png)
+
 Command click picks several, Shift click picks a run of them, and pressing on a row and moving across others picks those too. Copy Paths copies them all at once, one per line, space separated, or shell quoted, set on the General page. Esc clears the picks.
 
+![Three screenshots picked, with Copy 3 Paths](https://raw.githubusercontent.com/pratherbytecraft/shotdrawer/main/docs/screenshots/picked.png)
+
 Drag a picture out of the list to drop the file into another app. Right click a screenshot for Copy Path, Copy as file:// URL, Copy Filename, Show in Finder, Open, Remove from History and Move to Trash.
+
+![The right click menu](https://raw.githubusercontent.com/pratherbytecraft/shotdrawer/main/docs/screenshots/menu.png)
 
 The folder button at the bottom shows where the Mac saves screenshots and can change it, for the screenshot tool too. A change made in the screenshot tool's Options menu shows up in Shotdrawer right away. Clear History empties the list and leaves the files where they are.
 
 ## Settings
 
-Open Shotdrawer Settings from the gear in the list or the menu bar icon's right click. General sets how many screenshots the list keeps, how several paths are copied, the screenshot folder and open at login. Look switches the list between List and Grid. About has the update check.
+Open Shotdrawer Settings from the gear in the list or the menu bar icon's right click. General sets how many screenshots the list keeps, how several paths are copied, the screenshot folder and open at login. Look switches the list between List and Grid and turns the large picture on hover off. About has the update check.
+
+![Shotdrawer Settings](https://raw.githubusercontent.com/pratherbytecraft/shotdrawer/main/docs/screenshots/settings.png)
+
+![The Grid look](https://raw.githubusercontent.com/pratherbytecraft/shotdrawer/main/docs/screenshots/grid.png)
 
 Shotdrawer opens at login from its first launch. Switch it off on the General page.
 
-## With Filedrawer
+## With Filedrawer and Startbar
 
 When Filedrawer is installed, Show in Finder becomes Show in Filedrawer, and Filedrawer opens the folder with the screenshot picked. The General page switches it back to Finder.
+
+When Startbar is installed, its tray shows a Shotdrawer button that opens the list above the bar, and the menu bar icon steps aside while the button is there. The General page can keep the menu bar icon anyway.
 
 ## Folder access
 
@@ -45,7 +68,7 @@ macOS asks before Shotdrawer reads your Desktop or Documents folder for the firs
 
 ## Updates
 
-Shotdrawer checks for a newer version now and then and shows it on the About page. It never installs anything by itself. To update, run `npm install -g shotdrawer` again, then quit Shotdrawer and open it. The About page shows the line that fits your copy, with a Copy button.
+Shotdrawer checks for a newer version now and then and shows it on the About page. It never installs anything by itself. To update, run the install again, or `brew upgrade shotdrawer`, then quit Shotdrawer and open it. The About page shows the line that fits your copy, with a Copy button.
 
 ## Help
 
