@@ -160,8 +160,11 @@ export function unremove(files: string | string[]) {
 }
 
 // Empties the list. What was in the folder before now stays out; the
-// clear time covers everything taken out by hand before it too.
+// clear time covers everything taken out by hand before it too. It also
+// covers everything in the list, since a file's time has fractions of a
+// millisecond and can come out a hair later than now.
 export function clear(now = Date.now()) {
-  data = { clearedAt: Math.max(data.clearedAt ?? 0, now), removed: [], shots: [] };
+  const newest = Math.max(0, ...data.shots.map((s) => s.at));
+  data = { clearedAt: Math.max(data.clearedAt ?? 0, now, newest), removed: [], shots: [] };
   save();
 }

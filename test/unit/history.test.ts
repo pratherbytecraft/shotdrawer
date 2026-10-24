@@ -114,6 +114,18 @@ test('scan keeps the list on disk, clear empties it and keeps it empty', async (
   assert.deepStrictEqual(history.list().map((s) => s.path), [b]);
 });
 
+test('a screenshot made in the same millisecond as Clear History stays out', async () => {
+  history.init(tempDir());
+  const folder = tempDir();
+  const a = path.join(folder, 'Screenshot a.png');
+  fs.writeFileSync(a, 'x');
+  await history.scan(folder, 'Screenshot', 20);
+  // The clear's own time comes out a fraction before the file's.
+  history.clear(Math.floor(fs.statSync(a).birthtimeMs) - 1);
+  assert.ok(!(await history.scan(folder, 'Screenshot', 20)).changed);
+  assert.deepStrictEqual(history.list(), []);
+});
+
 test('a broken screenshots.json starts an empty list', () => {
   const data = tempDir();
   fs.writeFileSync(path.join(data, 'screenshots.json'), '{ not json');
