@@ -183,7 +183,23 @@ ipc.on('privacy:open', () => {
   shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
   panel.hide();
 });
-windowdrag.init();
+// A settings window dragged to a screen's edge stops above Startbar's bar,
+// read again as each drag starts (the bar can move or hide in between).
+let bars: startbar.Bar[] = [];
+windowdrag.init({
+  onStart: () => {
+    startbar.bars().then((list) => (bars = list));
+  },
+  cut: (f) => {
+    let cut = 0;
+    for (const b of bars) {
+      if (b.width >= f.width && b.x < f.x + f.width && b.x + b.width > f.x && b.y < f.y + f.height && b.y + b.height >= f.y + f.height - 1) {
+        cut = Math.max(cut, f.y + f.height - b.y);
+      }
+    }
+    return cut;
+  }
+});
 
 // Shows a screenshot picked in its folder, or a folder itself, in
 // Filedrawer when it's picked and installed, else in Finder.

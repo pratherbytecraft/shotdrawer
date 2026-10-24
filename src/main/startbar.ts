@@ -69,3 +69,27 @@ export function watch(onChange: (showing: boolean) => void) {
   tick();
   setInterval(tick, EVERY);
 }
+
+// Where Startbar's bars are on screen, in points from the main screen's top
+// left, read off the window server (no permission needed). A bar is one of
+// Startbar's windows that's low and against a screen's bottom; the caller
+// checks the screen. Empty when Startbar isn't running or the read fails.
+const BARS_SCRIPT = `ObjC.import('CoreGraphics');
+const list = ObjC.deepUnwrap(ObjC.castRefToObject($.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly | $.kCGWindowListExcludeDesktopElements, 0)));
+JSON.stringify(list.filter((w) => w.kCGWindowOwnerName === 'Startbar').map((w) => w.kCGWindowBounds));`;
+
+export interface Bar { x: number; y: number; width: number; height: number }
+
+export function bars(): Promise<Bar[]> {
+  return new Promise((resolve) => {
+    execFile('osascript', ['-l', 'JavaScript', '-e', BARS_SCRIPT], { encoding: 'utf8', timeout: 2000 }, (err, out) => {
+      if (err) return resolve([]);
+      try {
+        const list = JSON.parse(out) as { X: number; Y: number; Width: number; Height: number }[];
+        resolve(list.filter((b) => b.Height < 120).map((b) => ({ x: b.X, y: b.Y, width: b.Width, height: b.Height })));
+      } catch {
+        resolve([]);
+      }
+    });
+  });
+}
