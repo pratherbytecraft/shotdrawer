@@ -1,4 +1,4 @@
-// Cypress loads each renderer page on its own, served from src/renderer by
+// Cypress loads each renderer page on its own, served from dist/renderer by
 // a small server started here, with the preload's window.shotdrawer replaced
 // by a fake (support/fake.js) holding a few made up screenshots. Run with
 // npm run test:pages.
@@ -7,7 +7,7 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 
-const ROOT = path.join(__dirname, '..', '..', 'src', 'renderer');
+const ROOT = path.join(__dirname, '..', '..', 'dist', 'renderer');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
 function serve() {
