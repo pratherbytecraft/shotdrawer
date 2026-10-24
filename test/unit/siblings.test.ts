@@ -1,6 +1,6 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { installLine } = require('../../src/main/siblings');
+import test from 'node:test';
+import assert from 'node:assert';
+import { installLine } from '../../src/main/siblings';
 
 test('the install line matches how this copy was installed', () => {
   assert.strictEqual(installLine('startbar', true), 'brew install pratherbytecraft/tap/startbar');

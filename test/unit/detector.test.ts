@@ -1,6 +1,6 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { isScreenshot } = require('../../src/main/detector');
+import test from 'node:test';
+import assert from 'node:assert';
+import { isScreenshot } from '../../src/main/detector';
 
 // What macOS names them today: a narrow no-break space before PM.
 const TODAY = 'Screenshot 2026-10-26 at 4.12.04 PM.png';

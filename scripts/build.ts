@@ -9,7 +9,7 @@ import path from 'path';
 
 const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
-const SOURCE = /\.[jt]s$/;
+const SOURCE = /\.ts$/;
 
 // esbuild's { in, out } for each source file in a folder, out being the
 // output's path in dist/ without its extension.

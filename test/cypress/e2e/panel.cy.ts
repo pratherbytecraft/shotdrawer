@@ -1,5 +1,7 @@
 // The list under the menu bar icon, with the fake's five screenshots.
-const row = (name) => cy.get(`[data-path$="/${name}"]`);
+export {};
+
+const row = (name: string) => cy.get(`[data-path$="/${name}"]`);
 
 describe('the list', () => {
   it('groups screenshots by day, newest first, with their sizes', () => {
@@ -13,7 +15,7 @@ describe('the list', () => {
   });
 
   it('the time comes from the screenshot\'s name when it has one', () => {
-    let named;
+    let named = '';
     cy.page('panel/index.html', (state) => {
       // Yesterday at 2:15:07 PM by its name, written to disk at 2:16:02.
       const d = new Date();
@@ -26,7 +28,7 @@ describe('the list', () => {
   });
 
   it('a name far from when the file was made isn\'t trusted', () => {
-    let named;
+    let named = '';
     cy.page('panel/index.html', (state) => {
       named = 'Screenshot 2019-03-02 at 10.01.22 AM.png';
       state.shots[2] = { path: `${state.folder}/${named}`, at: new Date().setHours(0, 0, 0, 0) - 10 * 60 * 60 * 1000 };

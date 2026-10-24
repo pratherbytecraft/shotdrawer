@@ -1,14 +1,14 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const history = require('../../src/main/history');
+import test from 'node:test';
+import assert from 'node:assert';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import * as history from '../../src/main/history';
 
-const shot = (name, at) => ({ path: `/s/${name}.png`, at });
+const shot = (name: string, at: number) => ({ path: `/s/${name}.png`, at });
 const all = () => true;
 
-const fresh = (extra = {}) => ({ clearedAt: null, removed: [], shots: [], ...extra });
+const fresh = (extra: Partial<history.History> = {}): history.History => ({ clearedAt: null, removed: [], shots: [], ...extra });
 
 test('the first look takes the newest, cut to the size', () => {
   const found = [shot('a', 1), shot('b', 3), shot('c', 2)];
@@ -65,7 +65,7 @@ test('nothing new is no change', () => {
   assert.ok(!history.apply(last, [shot('a', 1), shot('b', 2)], 20, all).changed);
 });
 
-const made = [];
+const made: string[] = [];
 function tempDir() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotdrawer-test-'));
   made.push(dir);

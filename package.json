@@ -32,12 +32,12 @@
   "scripts": {
     "start": "npm run build && node dist/bin/shotdrawer.js --foreground",
     "build": "tsx scripts/build.ts",
-    "typecheck": "tsc -p . && tsc -p src/renderer",
+    "typecheck": "tsc -p . && tsc -p src/renderer && tsc -p test/cypress",
     "prepack": "npm run typecheck && npm run build",
     "postinstall": "node dist/scripts/fix-electron.js && node dist/scripts/build-app.js",
     "build-app": "node dist/scripts/build-app.js",
-    "test": "node --import tsx --test test/unit/*.test.js",
-    "test:pages": "npm run build && cypress run --config-file test/cypress/cypress.config.js"
+    "test": "node --import tsx --test test/unit/*.test.ts",
+    "test:pages": "npm run build && cypress run --config-file test/cypress/cypress.config.ts"
   },
   "dependencies": {
     "electron": "^33.2.1"

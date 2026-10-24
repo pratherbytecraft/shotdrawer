@@ -1,6 +1,6 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { parse } = require('../../src/main/location');
+import test from 'node:test';
+import assert from 'node:assert';
+import { parse } from '../../src/main/location';
 
 const HOME = '/Users/sam';
 

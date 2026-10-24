@@ -1,7 +1,7 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { execFileSync } = require('child_process');
-const copy = require('../../src/main/copy');
+import test from 'node:test';
+import assert from 'node:assert';
+import { execFileSync } from 'child_process';
+import * as copy from '../../src/main/copy';
 
 const PATHS = ['/Users/sam/Shots/Screenshot 2026-10-26 at 4.12.04 PM.png', "/Users/sam/Sam's shots/b.png"];
 

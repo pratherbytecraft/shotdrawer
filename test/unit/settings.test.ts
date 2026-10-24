@@ -1,6 +1,10 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { clean } = require('../../src/main/settings');
+import test from 'node:test';
+import assert from 'node:assert';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import * as settings from '../../src/main/settings';
+import { clean } from '../../src/main/settings';
 
 test('keeps known keys with good values', () => {
   assert.deepStrictEqual(clean({ historySize: 40, layout: 'grid' }), { historySize: 40, layout: 'grid' });
@@ -39,10 +43,6 @@ test('the history size stays within 5 to 100 in steps of 5', () => {
 });
 
 test('only the launch with no settings file counts as the first', () => {
-  const fs = require('fs');
-  const os = require('os');
-  const path = require('path');
-  const settings = require('../../src/main/settings');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shotdrawer-test-'));
   try {
     settings.init(dir);

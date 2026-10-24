@@ -1,18 +1,20 @@
 // Cypress loads each renderer page on its own, served from dist/renderer by
 // a small server started here, with the preload's window.shotdrawer replaced
-// by a fake (support/fake.js) holding a few made up screenshots. Run with
+// by a fake (support/fake.ts) holding a few made up screenshots. Run with
 // npm run test:pages.
-const { defineConfig } = require('cypress');
-const fs = require('fs');
-const http = require('http');
-const path = require('path');
+import { defineConfig } from 'cypress';
+import fs from 'fs';
+import http from 'http';
+import type { AddressInfo } from 'net';
+import path from 'path';
+import type { State } from '../../src/shared/types';
 
 const ROOT = path.join(__dirname, '..', '..', 'dist', 'renderer');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
+const TYPES: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
-function serve() {
+function serve(): Promise<number> {
   const server = http.createServer((req, res) => {
-    const file = path.join(ROOT, decodeURIComponent(new URL(req.url, 'http://x').pathname));
+    const file = path.join(ROOT, decodeURIComponent(new URL(req.url || '/', 'http://x').pathname));
     if (!file.startsWith(ROOT + path.sep)) {
       res.writeHead(403).end();
       return;
@@ -22,20 +24,20 @@ function serve() {
       res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' }).end(data);
     });
   });
-  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
+  return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve((server.address() as AddressInfo).port)));
 }
 
 // What the main process sends as state, with every setting at its default
 // and five screenshots: two from today, one from yesterday, two earlier.
 // The defaults come from the build, which npm run test:pages makes first.
-function shotdrawerState() {
+function shotdrawerState(): State {
   const { DEFAULTS } = require('../../dist/main/settings');
   const folder = '/Users/test/Documents/Temp Screenshots';
   const now = new Date();
-  const at = (daysAgo, hour, minute) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo, hour, minute).getTime();
+  const at = (daysAgo: number, hour: number, minute: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo, hour, minute).getTime();
   const today = now.getHours() * 60 + now.getMinutes();
   // Today's two are a few minutes old, earlier today when it's past midnight.
-  const minutesAgo = (m) => now.getTime() - Math.min(m, today) * 60 * 1000;
+  const minutesAgo = (m: number) => now.getTime() - Math.min(m, today) * 60 * 1000;
   const shots = [
     { path: `${folder}/Screenshot today b.png`, at: minutesAgo(3) },
     { path: `${folder}/Screenshot today a.png`, at: minutesAgo(4) },
@@ -68,7 +70,7 @@ function apiNames() {
   return [...preload.matchAll(/^  (\w+): /gm)].map((m) => m[1]);
 }
 
-module.exports = defineConfig({
+export default defineConfig({
   video: false,
   screenshotsFolder: path.join(__dirname, 'screenshots'),
   downloadsFolder: path.join(__dirname, 'downloads'),
@@ -76,8 +78,8 @@ module.exports = defineConfig({
   viewportWidth: 760,
   viewportHeight: 560,
   e2e: {
-    specPattern: path.join(__dirname, 'e2e', '*.cy.js'),
-    supportFile: path.join(__dirname, 'support', 'e2e.js'),
+    specPattern: path.join(__dirname, 'e2e', '*.cy.ts'),
+    supportFile: path.join(__dirname, 'support', 'e2e.ts'),
     async setupNodeEvents(on, config) {
       config.env.pages = `http://127.0.0.1:${await serve()}`;
       on('task', { shotdrawerState, apiNames });

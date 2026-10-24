@@ -1,6 +1,6 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { decide } = require('../../src/main/startbar');
+import test from 'node:test';
+import assert from 'node:assert';
+import { decide } from '../../src/main/startbar';
 
 test('Startbar running a version with the button shows it unless it\'s switched off', () => {
   assert.strictEqual(decide({ running: true, version: '0.2.17', settings: {} }), true);

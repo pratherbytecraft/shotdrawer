@@ -1,8 +1,8 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const { pngSize } = require('../../src/main/thumbs');
+import test from 'node:test';
+import assert from 'node:assert';
+import { pngSize } from '../../src/main/thumbs';
 
-function header(width, height) {
+function header(width: number, height: number) {
   const buf = Buffer.alloc(24);
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf, 0);
   buf.writeUInt32BE(13, 8);
