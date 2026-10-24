@@ -5,6 +5,7 @@
 // to be.
 const { BrowserWindow, screen } = require('electron');
 const path = require('path');
+const look = require('./look');
 
 const WIDTH = 360;
 const GAP = 5; // points between the menu bar (or the spot) and the list
@@ -77,6 +78,7 @@ function show(spot) {
 
 function hide() {
   if (!win || !win.isVisible()) return;
+  look.hide();
   win.hide();
   hiddenAt = Date.now();
 }

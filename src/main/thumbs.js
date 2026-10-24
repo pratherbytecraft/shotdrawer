@@ -46,7 +46,7 @@ async function one(file) {
   } catch {
     // no picture for this one, the row shows a plain box
   }
-  const info = { thumb, size: await dimensions(file), bytes: stat.size };
+  const info = { thumb, size: await dimensions(file), bytes: stat.size, mtime: stat.mtimeMs };
   cache.set(key, info);
   if (cache.size > KEEP) cache.delete(cache.keys().next().value);
   return info;

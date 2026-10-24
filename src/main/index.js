@@ -17,6 +17,7 @@ const prefs = require('./prefs');
 const updates = require('./updates');
 const link = require('./link');
 const startbar = require('./startbar');
+const look = require('./look');
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
 // so it stays the same across updates (see scripts/build-app.js).
@@ -132,6 +133,14 @@ ipcMain.on('shots:copy', (_e, files) => clipboard.writeText(copy.join(files, set
 ipcMain.on('shot:show', (_e, file) => showIn(file));
 ipcMain.on('shot:menu', (_e, file, picked) => shotMenu(file, picked));
 ipcMain.on('shots:trash', (_e, files) => trash(files));
+// The big look beside the list. The row comes in the list's own points.
+ipcMain.on('look:show', (_e, file, row, keys) => {
+  const list = panel.window();
+  if (!list || !list.isVisible()) return;
+  const b = list.getBounds();
+  look.show(file, { x: b.x + row.x, y: b.y + row.y, width: row.width, height: row.height }, b, keys).catch(() => look.hide());
+});
+ipcMain.on('look:hide', () => look.hide());
 ipcMain.on('shots:drag', (e, files, picture) => {
   let icon = picture ? nativeImage.createFromDataURL(picture) : null;
   if (!icon || icon.isEmpty()) icon = nativeImage.createFromPath(path.join(__dirname, '..', '..', 'assets', 'Shotdrawer.icns'));
@@ -333,6 +342,7 @@ app.whenReady().then(async () => {
     placeIcon();
   });
   panel.create();
+  look.prepare();
   ready = true;
   waiting.splice(0).forEach(openLink);
   const firstLook = follow(await location.read());

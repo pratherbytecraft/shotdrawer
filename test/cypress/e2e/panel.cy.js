@@ -292,6 +292,45 @@ describe('the list', () => {
     cy.get('.tile.kb').should('have.attr', 'data-path').and('match', /yesterday\.png$/);
   });
 
+  it('resting on a picture opens the big look, and it follows to the next picture', () => {
+    cy.page('panel/index.html');
+    row('Screenshot today a.png').find('.th').trigger('mouseover');
+    cy.calls('look').should('have.length', 0);
+    cy.calls('look').should('have.length', 1).its(0).should((c) => {
+      expect(c[0]).to.match(/today a\.png$/);
+      expect(c[2]).to.equal(false);
+    });
+    row('Screenshot yesterday.png').find('.th').trigger('mouseover');
+    cy.calls('look').should('have.length', 2);
+    // Off the pictures it goes away.
+    row('Screenshot yesterday.png').find('.info').trigger('mouseover');
+    cy.calls('lookHide').should('have.length', 1);
+  });
+
+  it('with the switch off, resting on a picture does nothing', () => {
+    cy.page('panel/index.html', (state) => {
+      state.settings.bigLook = false;
+    });
+    row('Screenshot today a.png').find('.th').trigger('mouseover');
+    cy.wait(800);
+    cy.calls('look').should('have.length', 0);
+  });
+
+  it('Space opens the big look for the row the keys are on, the arrows follow, Esc closes it first', () => {
+    cy.page('panel/index.html');
+    cy.get('.row').should('have.length', 5);
+    cy.get('body').type('{downarrow} ');
+    cy.calls('look').its(0).should((c) => {
+      expect(c[0]).to.match(/today b\.png$/);
+      expect(c[2]).to.equal(true);
+    });
+    cy.get('body').type('{downarrow}');
+    cy.calls('look').its(1).its(0).should('match', /today a\.png$/);
+    cy.get('body').type('{esc}');
+    cy.calls('lookHide').should('have.length', 1);
+    cy.calls('hide').should('have.length', 0);
+  });
+
   it('Esc with nothing picked closes the list', () => {
     cy.page('panel/index.html');
     cy.get('.row').should('have.length', 5);

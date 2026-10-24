@@ -92,6 +92,13 @@ describe('settings window', () => {
     cy.get('#login').should('not.have.class', 'on');
   });
 
+  it('Look has the big look switch, on by default', () => {
+    cy.page('settings/index.html');
+    open('Look');
+    cy.get('#big-look').should('have.class', 'on').click();
+    cy.calls('set').should('deep.include', [{ bigLook: false }]);
+  });
+
   it('Look sends List or Grid', () => {
     cy.page('settings/index.html');
     open('Look');

@@ -201,6 +201,7 @@ function take(next) {
   const here = new Set(state.shots.map((s) => s.path));
   for (const p of picked) if (!here.has(p)) picked.delete(p);
   if (cursor && !here.has(cursor)) cursor = null;
+  if (lookingAt && !here.has(lookingAt)) closeLook();
   render();
   fill();
 }
@@ -213,6 +214,8 @@ api.onShown(() => {
   undo = null;
   cursor = null;
   keyed = false;
+  lookingAt = null;
+  lookKeys = false;
   picked.clear();
   anchor = null;
   render();
@@ -357,6 +360,7 @@ body.addEventListener('dragstart', (e) => {
   if (!item) return;
   e.preventDefault();
   hideTip();
+  closeLook();
   const file = item.dataset.path;
   const files = picked.has(file) ? pickedPaths() : [file];
   const info = details[file];
@@ -379,8 +383,9 @@ let tipTimer = null;
 let tipFor = null;
 body.addEventListener('mouseover', (e) => {
   const item = e.target.closest('[data-path]');
-  // The row's buttons have tips of their own.
-  if (!item || e.target.closest('[data-act]')) {
+  // The row's buttons have tips of their own, and the big look shows the
+  // name of a picture the pointer rests on.
+  if (!item || e.target.closest('[data-act]') || (state.settings.bigLook && e.target.closest('.th'))) {
     hideTip();
     return;
   }
@@ -427,6 +432,53 @@ document.getElementById('gear').addEventListener('click', () => api.openSettings
 
 // The window takes the page's height.
 new ResizeObserver(() => api.setHeight(panel.offsetHeight)).observe(panel);
+
+// MARK: the big look, from mockups/biglook.html. It opens when the pointer
+// rests on a picture (not the rest of the row) for a moment, and follows to
+// the next picture at once while it's open. Space opens it for the row the
+// keys are on and keeps it until Space or Esc.
+const LOOK_AFTER = 500; // ms
+let lookTimer = null;
+let lookingAt = null; // the screenshot in the big look
+let lookKeys = false; // opened with Space
+
+function openLook(file, keys) {
+  const el = itemOf(file);
+  if (!el) return;
+  clearTimeout(lookTimer);
+  const r = el.getBoundingClientRect();
+  lookingAt = file;
+  lookKeys = keys;
+  hideTip();
+  api.look(file, { x: r.left, y: r.top, width: r.width, height: r.height }, keys);
+}
+
+function closeLook() {
+  clearTimeout(lookTimer);
+  if (lookingAt) api.lookHide();
+  lookingAt = null;
+  lookKeys = false;
+}
+
+body.addEventListener('mouseover', (e) => {
+  if (lookKeys || sweep) return;
+  const item = e.target.closest('.th') && e.target.closest('[data-path]');
+  clearTimeout(lookTimer);
+  if (!item || !state.settings.bigLook) {
+    if (lookingAt) closeLook();
+    return;
+  }
+  if (item.dataset.path === lookingAt) return;
+  if (lookingAt) openLook(item.dataset.path, false);
+  else lookTimer = setTimeout(() => openLook(item.dataset.path, false), LOOK_AFTER);
+});
+body.addEventListener('mouseleave', () => {
+  if (!lookKeys) closeLook();
+});
+// A click or a drag puts it away.
+body.addEventListener('mousedown', () => {
+  if (!lookKeys) closeLook();
+});
 
 // MARK: keys, from mockups/picking.html. The row the keys are on gets a
 // ring; the pointer and the keys share that spot, so moving the pointer
@@ -492,6 +544,8 @@ function moveTo(el, extend) {
   render();
   const now = itemOf(cursor);
   if (now) now.scrollIntoView({ block: 'nearest' });
+  // The big look opened with Space shows what the ring moved to.
+  if (lookKeys) openLook(cursor, true);
 }
 
 const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
@@ -515,6 +569,10 @@ document.addEventListener('keydown', (e) => {
       api.copy(cursor);
       markCopied(cursor);
     }
+  } else if (e.key === ' ' && cursor) {
+    e.preventDefault();
+    if (lookKeys) closeLook();
+    else openLook(cursor, true);
   } else if (e.metaKey && e.key.toLowerCase() === 'a') {
     e.preventDefault();
     for (const s of state.shots) picked.add(s.path);
@@ -528,7 +586,9 @@ document.addEventListener('keydown', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (confirming) {
+  if (lookingAt) {
+    closeLook();
+  } else if (confirming) {
     confirming = false;
     render();
   } else if (picked.size) {

@@ -10,7 +10,8 @@ const DEFAULTS = Object.freeze({
   copyFormat: 'newline', // newline | space | quoted: how several paths are joined
   showIn: 'filedrawer', // filedrawer | finder: where Show in opens, when Filedrawer is installed
   menuBarIcon: 'auto', // auto (hidden while Startbar shows its Shotdrawer button) | always
-  closeAfterCopy: false // the list closes a moment after a copy
+  closeAfterCopy: false, // the list closes a moment after a copy
+  bigLook: true // the big look opens when the pointer rests on a picture (Space always opens it)
 });
 
 const CHOICES = {

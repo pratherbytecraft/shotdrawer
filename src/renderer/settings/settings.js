@@ -63,6 +63,7 @@ function draw() {
   $('login').classList.toggle('on', app.loginItem.on);
   $('login-note').hidden = !app.loginItem.needsApproval;
   seg('layout', s.layout);
+  $('big-look').classList.toggle('on', s.bigLook);
   $('version').textContent = `Version ${app.version}`;
   $('update-line').textContent = updateLine();
   $('check').disabled = app.update && app.update.state === 'checking';
@@ -140,6 +141,7 @@ $('layout').addEventListener('click', (e) => {
 });
 $('show-folder').addEventListener('click', () => api.showFolder());
 $('change-folder').addEventListener('click', () => api.changeFolder());
+$('big-look').addEventListener('click', () => set({ bigLook: !app.settings.bigLook }));
 $('close-after').addEventListener('click', () => set({ closeAfterCopy: !app.settings.closeAfterCopy }));
 $('login').addEventListener('click', () => api.setLoginItem(!app.loginItem.on));
 $('check').addEventListener('click', () => api.checkUpdates());

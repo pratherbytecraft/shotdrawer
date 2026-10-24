@@ -11,6 +11,10 @@ test('keeps the copy format and where Show in opens', () => {
   assert.deepStrictEqual(clean({ copyFormat: 'csv', showIn: 'path finder' }), {});
 });
 
+test('keeps the big look switch', () => {
+  assert.deepStrictEqual(clean({ bigLook: false }), { bigLook: false });
+});
+
 test('keeps the close after copying switch', () => {
   assert.deepStrictEqual(clean({ closeAfterCopy: false }), { closeAfterCopy: false });
   assert.deepStrictEqual(clean({ closeAfterCopy: 'no' }), {});
