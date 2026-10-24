@@ -75,9 +75,9 @@ describe('settings window', () => {
 
   it('the Close the list after copying switch sends its setting', () => {
     cy.page('settings/index.html');
-    cy.get('#close-after').should('have.class', 'on').click();
-    cy.calls('set').should('deep.include', [{ closeAfterCopy: false }]);
-    cy.get('#close-after').should('not.have.class', 'on');
+    cy.get('#close-after').should('not.have.class', 'on').click();
+    cy.calls('set').should('deep.include', [{ closeAfterCopy: true }]);
+    cy.get('#close-after').should('have.class', 'on');
   });
 
   it('the folder buttons and the login switch reach the main process', () => {

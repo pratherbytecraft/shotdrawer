@@ -63,8 +63,10 @@ describe('the list', () => {
     cy.calls('hide').should('have.length', 0);
   });
 
-  it('the list closes a moment after a copy, or stays with the switch off', () => {
-    cy.page('panel/index.html');
+  it('the list stays open after a copy, or closes a moment later with the switch on', () => {
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = true;
+    });
     row('Screenshot yesterday.png').find('.info').click();
     cy.calls('hide').should('have.length', 0);
     cy.calls('hide').should('have.length', 1);
@@ -77,7 +79,9 @@ describe('the list', () => {
   });
 
   it('a click in the list right after a copy keeps it open', () => {
-    cy.page('panel/index.html');
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = true;
+    });
     row('Screenshot yesterday.png').find('.info').click();
     row('Screenshot today a.png').find('.info').click({ metaKey: true });
     cy.wait(800);
