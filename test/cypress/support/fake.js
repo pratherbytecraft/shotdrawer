@@ -1,5 +1,5 @@
 // A stand-in for the preload's window.shotdrawer, with the same function
-// names (read from src/preload.js). Every function the page calls is noted
+// names (read from src/preload.ts). Every function the page calls is noted
 // in calls as [name, ...args]. Settings, the login switch and Clear History
 // change the state and send it back, like the main process does.
 // emit(channel, payload) sends what an on... function listens for

@@ -2,10 +2,16 @@
 // in rows or a grid, grouped by day. A click copies the screenshot's path;
 // several can be picked and copied together, dragged out, or acted on from
 // the right click menu.
+import type { CopyFormat, Shot, ShotInfo, State } from '../../shared/types';
+
 const api = window.shotdrawer;
-const panel = document.getElementById('panel');
-const body = document.getElementById('body');
-const tip = document.getElementById('tip');
+const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+const target = (e: Event) => e.target as HTMLElement;
+// Rows and tiles carry their screenshot's path.
+const pathOf = (el: HTMLElement) => el.dataset.path as string;
+const panel = $('panel');
+const body = $('body');
+const tip = $('tip');
 
 const I = {
   viewfinder: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.8 5V2.5a.7.7 0 0 1 .7-.7H5M11 1.8h2.5a.7.7 0 0 1 .7.7V5M14.2 11v2.5a.7.7 0 0 1-.7.7H11M5 14.2H2.5a.7.7 0 0 1-.7-.7V11"/><path d="M4.5 11l2.5-3 1.8 2 1.2-1.2 1.5 2.2"/></svg>',
@@ -19,30 +25,32 @@ const COPIED_FOR = 1200; // ms
 const CLOSE_AFTER = 500; // ms the Copied mark shows before the list closes, when it does
 const TIP_AFTER = 600; // ms
 
-let state = null;
-const details = {}; // path -> { thumb, size, bytes }
-let copied = null; // { path, until }
+// The state from main. Drawing waits for it, so it's there by the time
+// anything reads it.
+let state = null as unknown as State;
+const details: Record<string, ShotInfo> = {}; // path -> { thumb, size, bytes }
+let copied: { path: string; until: number } | null = null;
 let confirming = false;
-const picked = new Set(); // paths picked with Cmd click, Shift click or a sweep
-let anchor = null; // the last path clicked with Cmd or Shift, where a Shift range starts
+const picked = new Set<string>(); // paths picked with Cmd click, Shift click or a sweep
+let anchor: string | null = null; // the last path clicked with Cmd or Shift, where a Shift range starts
 let pickedCopied = 0; // until when the selection bar says Copied
 // After Remove from History, the files for its Undo, and whether Undo was
 // used. The line stays until the list closes, after Undo too, so nothing
 // below it moves under the pointer (the footer's Quit would slide up into
 // its place).
-let undo = null; // { files, done }
+let undo: { files: string[]; done: boolean } | null = null;
 
-const FORMAT_LABEL = { newline: 'one per line', space: 'space separated', quoted: 'shell quoted' };
+const FORMAT_LABEL: Record<CopyFormat, string> = { newline: 'one per line', space: 'space separated', quoted: 'shell quoted' };
 
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const baseName = (p) => p.slice(p.lastIndexOf('/') + 1);
+const esc = (s: unknown) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const baseName = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 
 // When a screenshot was taken, from its name ("Screenshot 2026-10-26 at
 // 9.38.04 PM", or 21.38.04 on a Mac set to 24 hours). The file itself is
 // written a few seconds later, and that's `at`. A name far off from the file
 // (an old screenshot copied in by hand) isn't trusted.
 const NAMED = /(\d{4})-(\d{2})-(\d{2}) at (\d{1,2})\.(\d{2})\.(\d{2})(?:[\s\u202f\u00a0]*([AaPp])[Mm])?/;
-function takenAt(shot) {
+function takenAt(shot: Shot) {
   const m = baseName(shot.path).match(NAMED);
   if (!m) return shot.at;
   let hour = Number(m[4]);
@@ -51,7 +59,7 @@ function takenAt(shot) {
   return Math.abs(t - shot.at) < 60 * 60 * 1000 ? t : shot.at;
 }
 
-function dayOf(at, now) {
+function dayOf(at: number, now: number) {
   const d = new Date(at);
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
@@ -61,13 +69,13 @@ function dayOf(at, now) {
   return d >= yesterday ? 'Yesterday' : 'Earlier';
 }
 
-function timeOf(at, day) {
+function timeOf(at: number, day: string) {
   const d = new Date(at);
   if (day === 'Earlier') return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-function ago(at, now) {
+function ago(at: number, now: number) {
   const min = Math.floor((now - at) / 60000);
   if (min < 1) return 'just now';
   if (min < 60) return `${min} min ago`;
@@ -75,13 +83,13 @@ function ago(at, now) {
 }
 
 // Finder's way: 1000 bytes to a KB.
-function bytesOf(n) {
+function bytesOf(n: number) {
   if (n < 1000) return `${n} bytes`;
   if (n < 1000 * 1000) return `${Math.round(n / 1000)} KB`;
   return `${(n / 1000 / 1000).toFixed(1)} MB`;
 }
 
-function sizeLine(info) {
+function sizeLine(info: ShotInfo | undefined) {
   if (!info) return '';
   const parts = [];
   if (info.size) parts.push(`${info.size.width} × ${info.size.height}`);
@@ -91,7 +99,7 @@ function sizeLine(info) {
 
 // The picture, with the circle that picks it on its corner, shown while the
 // pointer is on the row and nothing is picked yet.
-function thumb(shot) {
+function thumb(shot: Shot) {
   const info = details[shot.path];
   return `<div class="thw"><div class="th" draggable="true">${info && info.thumb ? `<img src="${info.thumb}" alt="">` : ''}</div>`
     + '<button class="pick" data-act="pick" title="Pick"></button></div>';
@@ -117,14 +125,14 @@ function render() {
   const now = Date.now();
   const shots = state.shots;
   const grid = state.settings.layout === 'grid';
-  const count = document.getElementById('count');
+  const count = $('count');
   count.hidden = shots.length === 0;
-  count.textContent = shots.length;
+  count.textContent = String(shots.length);
 
   if (!shots.length || state.access === 'denied') {
     body.innerHTML = emptyState();
   } else {
-    let lastDay = null;
+    let lastDay: string | null = null;
     const items = shots.map((shot) => {
       const taken = takenAt(shot);
       const day = dayOf(taken, now);
@@ -150,30 +158,31 @@ function render() {
       }
       return out;
     }).join('');
-    const scroll = body.querySelector('.list') ? body.querySelector('.list').scrollTop : 0;
+    const was = body.querySelector('.list');
+    const scroll = was ? was.scrollTop : 0;
     const cls = picked.size ? 'list picking' : 'list';
     body.innerHTML = grid ? `<div class="${cls}"><div class="grid">${items}</div></div>` : `<div class="${cls}">${items}</div>`;
-    body.querySelector('.list').scrollTop = scroll;
+    body.querySelector('.list')!.scrollTop = scroll;
   }
 
-  const folder = document.getElementById('folder');
+  const folder = $('folder');
   folder.innerHTML = `${I.folder}<span>${esc(baseName(state.folder || ''))}</span>${I.chev}`;
-  document.getElementById('clear').disabled = shots.length === 0;
+  $<HTMLButtonElement>('clear').disabled = shots.length === 0;
   // The Undo line after Remove from History, while nothing's picked.
-  const undoBar = document.getElementById('undobar');
+  const undoBar = $('undobar');
   undoBar.hidden = !undo || picked.size > 0;
   if (undo) {
     const what = undo.files.length === 1 ? 'a screenshot' : `${undo.files.length} screenshots`;
-    document.getElementById('undo-msg').textContent = undo.done ? 'Back in the list.' : `Removed ${what} from the list.`;
-    document.getElementById('undo').style.visibility = undo.done ? 'hidden' : '';
+    $('undo-msg').textContent = undo.done ? 'Back in the list.' : `Removed ${what} from the list.`;
+    $('undo').style.visibility = undo.done ? 'hidden' : '';
   }
-  const selbar = document.getElementById('selbar');
+  const selbar = $('selbar');
   selbar.hidden = picked.size === 0;
-  document.getElementById('sel-msg').innerHTML = `<b>${picked.size} selected</b> · ${FORMAT_LABEL[state.settings.copyFormat]}`;
-  document.getElementById('sel-copy').textContent = pickedCopied > now ? 'Copied' : `Copy ${picked.size} ${picked.size === 1 ? 'Path' : 'Paths'}`;
-  const confirm = document.getElementById('confirm');
+  $('sel-msg').innerHTML = `<b>${picked.size} selected</b> · ${FORMAT_LABEL[state.settings.copyFormat]}`;
+  $('sel-copy').textContent = pickedCopied > now ? 'Copied' : `Copy ${picked.size} ${picked.size === 1 ? 'Path' : 'Paths'}`;
+  const confirm = $('confirm');
   confirm.hidden = !confirming;
-  document.getElementById('confirm-msg').textContent = `Clear all ${shots.length} from the list? The files stay where they are.`;
+  $('confirm-msg').textContent = `Clear all ${shots.length} from the list? The files stay where they are.`;
 }
 
 // Pictures and sizes for screenshots that don't have them yet.
@@ -195,7 +204,7 @@ function clearPicked() {
   render();
 }
 
-function take(next) {
+function take(next: State) {
   state = next;
   if (!state.shots.length) confirming = false;
   const here = new Set(state.shots.map((s) => s.path));
@@ -226,7 +235,7 @@ api.onRemoved((files) => {
   undo = { files, done: false };
   render();
 });
-document.getElementById('undo').addEventListener('click', () => {
+$('undo').addEventListener('click', () => {
   if (!undo || undo.done) return;
   api.unremove(undo.files);
   undo.done = true;
@@ -237,7 +246,7 @@ setInterval(render, 60 * 1000);
 // After a copy the list closes a moment later, once the Copied mark has
 // been seen, unless the General page keeps it open. Anything done in the
 // list in the meantime keeps it open.
-let closing = null;
+let closing: number | undefined;
 function closeSoon() {
   clearTimeout(closing);
   if (state.settings.closeAfterCopy) closing = setTimeout(() => api.hide(), CLOSE_AFTER);
@@ -245,7 +254,7 @@ function closeSoon() {
 document.addEventListener('mousedown', () => clearTimeout(closing), true);
 document.addEventListener('keydown', () => clearTimeout(closing), true);
 
-function markCopied(file) {
+function markCopied(file: string) {
   copied = { path: file, until: Date.now() + COPIED_FOR };
   render();
   setTimeout(render, COPIED_FOR + 20);
@@ -256,7 +265,8 @@ function markCopied(file) {
 // click picks the run from the last one clicked, or unpicks one picked.
 // While anything is picked a plain click picks or unpicks too, the way the
 // circles show; Copy Paths copies them.
-function clickShot(file, e) {
+// e is the click, or which keys count as held for one from the keyboard.
+function clickShot(file: string, e: { metaKey?: boolean; shiftKey?: boolean }) {
   if (e.metaKey || (!e.shiftKey && picked.size)) {
     if (picked.has(file)) picked.delete(file);
     else picked.add(file);
@@ -280,45 +290,45 @@ function clickShot(file, e) {
 }
 
 body.addEventListener('click', (e) => {
-  if (e.target.closest('#privacy')) {
+  if (target(e).closest<HTMLElement>('#privacy')) {
     api.openPrivacy();
     return;
   }
-  const item = e.target.closest('[data-path]');
+  const item = target(e).closest<HTMLElement>('[data-path]');
   if (!item) return;
   hideTip();
   if (swept) {
     swept = false;
     return;
   }
-  const act = e.target.closest('[data-act]');
-  if (act && act.dataset.act === 'show') api.show(item.dataset.path);
-  else if (act && act.dataset.act === 'menu') openMenu(item.dataset.path);
-  else if (act && act.dataset.act === 'pick') clickShot(item.dataset.path, { metaKey: true });
-  else clickShot(item.dataset.path, e);
+  const act = target(e).closest<HTMLElement>('[data-act]');
+  if (act && act.dataset.act === 'show') api.show(pathOf(item));
+  else if (act && act.dataset.act === 'menu') openMenu(pathOf(item));
+  else if (act && act.dataset.act === 'pick') clickShot(pathOf(item), { metaKey: true });
+  else clickShot(pathOf(item), e);
 });
 
-function openMenu(file) {
+function openMenu(file: string) {
   hideTip();
   api.menu(file, picked.has(file) ? pickedPaths() : []);
 }
 
 body.addEventListener('contextmenu', (e) => {
-  const item = e.target.closest('[data-path]');
+  const item = target(e).closest<HTMLElement>('[data-path]');
   if (!item) return;
   e.preventDefault();
-  openMenu(item.dataset.path);
+  openMenu(pathOf(item));
 });
 
 // Pressing on a row and moving across others picks them all, from the row
 // pressed to the one under the pointer. Pressing on the picture drags the
 // file out instead.
-let sweep = null; // { from, before } while the button is down
+let sweep: { from: string; before: Set<string> } | null = null; // while the button is down
 let swept = false; // the click that ends a sweep doesn't copy
 body.addEventListener('mousedown', (e) => {
-  const item = e.target.closest('[data-path]');
-  if (e.button !== 0 || !item || e.target.closest('.th, [data-act]')) return;
-  sweep = { from: item.dataset.path, before: e.metaKey ? new Set(picked) : new Set() };
+  const item = target(e).closest<HTMLElement>('[data-path]');
+  if (e.button !== 0 || !item || target(e).closest<HTMLElement>('.th, [data-act]')) return;
+  sweep = { from: pathOf(item), before: e.metaKey ? new Set(picked) : new Set() };
 });
 body.addEventListener('mouseover', (e) => {
   if (!sweep) return;
@@ -330,14 +340,14 @@ body.addEventListener('mouseover', (e) => {
     swept = false;
     return;
   }
-  const item = e.target.closest('[data-path]');
+  const item = target(e).closest<HTMLElement>('[data-path]');
   if (!item || (item.dataset.path === sweep.from && !swept)) return;
   const order = state.shots.map((s) => s.path);
-  const [a, b] = [order.indexOf(sweep.from), order.indexOf(item.dataset.path)].sort((x, y) => x - y);
+  const [a, b] = [order.indexOf(sweep.from), order.indexOf(pathOf(item))].sort((x, y) => x - y);
   picked.clear();
   for (const p of sweep.before) picked.add(p);
   for (const p of order.slice(a, b + 1)) picked.add(p);
-  anchor = item.dataset.path;
+  anchor = pathOf(item);
   swept = true;
   render();
 });
@@ -356,18 +366,18 @@ window.addEventListener('blur', () => {
 // Dragging a picture drops the file, or all the picked ones when it's
 // among them, into another app.
 body.addEventListener('dragstart', (e) => {
-  const item = e.target.closest('[data-path]');
+  const item = target(e).closest<HTMLElement>('[data-path]');
   if (!item) return;
   e.preventDefault();
   hideTip();
   closeLook();
-  const file = item.dataset.path;
+  const file = pathOf(item);
   const files = picked.has(file) ? pickedPaths() : [file];
   const info = details[file];
   api.drag(files, info && info.thumb);
 });
 
-document.getElementById('sel-copy').addEventListener('click', () => copyPicked());
+$('sel-copy').addEventListener('click', () => copyPicked());
 
 function copyPicked() {
   api.copyMany(pickedPaths());
@@ -376,27 +386,27 @@ function copyPicked() {
   setTimeout(render, COPIED_FOR + 20);
   closeSoon();
 }
-document.getElementById('sel-clear').addEventListener('click', clearPicked);
+$('sel-clear').addEventListener('click', clearPicked);
 
 // The file name shows when the pointer rests on a screenshot.
-let tipTimer = null;
-let tipFor = null;
+let tipTimer: number | undefined;
+let tipFor: string | null = null;
 body.addEventListener('mouseover', (e) => {
-  const item = e.target.closest('[data-path]');
+  const item = target(e).closest<HTMLElement>('[data-path]');
   // The row's buttons have tips of their own, and the big look shows the
   // name of a picture the pointer rests on.
-  if (!item || e.target.closest('[data-act]') || (state.settings.bigLook && e.target.closest('.th'))) {
+  if (!item || target(e).closest<HTMLElement>('[data-act]') || (state.settings.bigLook && target(e).closest<HTMLElement>('.th'))) {
     hideTip();
     return;
   }
   if (item.dataset.path === tipFor) return;
-  tipFor = item.dataset.path;
+  tipFor = pathOf(item);
   tip.hidden = true;
   clearTimeout(tipTimer);
-  const file = item.dataset.path;
+  const file = pathOf(item);
   tipTimer = setTimeout(() => {
     // The list may have been drawn again since; find the row as it is now.
-    const now = [...body.querySelectorAll('[data-path]')].find((el) => el.dataset.path === file);
+    const now = [...body.querySelectorAll<HTMLElement>('[data-path]')].find((el) => el.dataset.path === file);
     if (!now || sweep) return;
     const box = now.getBoundingClientRect();
     tip.textContent = baseName(file);
@@ -414,21 +424,21 @@ function hideTip() {
 body.addEventListener('mouseleave', hideTip);
 body.addEventListener('scroll', hideTip, true);
 
-document.getElementById('folder').addEventListener('click', () => api.folderMenu());
-document.getElementById('clear').addEventListener('click', () => {
+$('folder').addEventListener('click', () => api.folderMenu());
+$('clear').addEventListener('click', () => {
   confirming = true;
   render();
 });
-document.getElementById('confirm-cancel').addEventListener('click', () => {
+$('confirm-cancel').addEventListener('click', () => {
   confirming = false;
   render();
 });
-document.getElementById('confirm-clear').addEventListener('click', () => {
+$('confirm-clear').addEventListener('click', () => {
   confirming = false;
   api.clearHistory();
 });
-document.getElementById('quit').addEventListener('click', () => api.quit());
-document.getElementById('gear').addEventListener('click', () => api.openSettings());
+$('quit').addEventListener('click', () => api.quit());
+$('gear').addEventListener('click', () => api.openSettings());
 
 // The window takes the page's height.
 new ResizeObserver(() => api.setHeight(panel.offsetHeight)).observe(panel);
@@ -438,11 +448,11 @@ new ResizeObserver(() => api.setHeight(panel.offsetHeight)).observe(panel);
 // the next picture at once while it's open. Space opens it for the row the
 // keys are on and keeps it until Space or Esc.
 const LOOK_AFTER = 500; // ms
-let lookTimer = null;
-let lookingAt = null; // the screenshot in the big look
+let lookTimer: number | undefined;
+let lookingAt: string | null = null; // the screenshot in the big look
 let lookKeys = false; // opened with Space
 
-function openLook(file, keys) {
+function openLook(file: string, keys: boolean) {
   const el = itemOf(file);
   if (!el) return;
   clearTimeout(lookTimer);
@@ -462,15 +472,15 @@ function closeLook() {
 
 body.addEventListener('mouseover', (e) => {
   if (lookKeys || sweep) return;
-  const item = e.target.closest('.th') && e.target.closest('[data-path]');
+  const item = target(e).closest<HTMLElement>('.th') && target(e).closest<HTMLElement>('[data-path]');
   clearTimeout(lookTimer);
   if (!item || !state.settings.bigLook) {
     if (lookingAt) closeLook();
     return;
   }
   if (item.dataset.path === lookingAt) return;
-  if (lookingAt) openLook(item.dataset.path, false);
-  else lookTimer = setTimeout(() => openLook(item.dataset.path, false), LOOK_AFTER);
+  if (lookingAt) openLook(pathOf(item), false);
+  else lookTimer = setTimeout(() => openLook(pathOf(item), false), LOOK_AFTER);
 });
 body.addEventListener('mouseleave', () => {
   if (!lookKeys) closeLook();
@@ -483,11 +493,11 @@ body.addEventListener('mousedown', () => {
 // MARK: keys, from mockups/picking.html. The row the keys are on gets a
 // ring; the pointer and the keys share that spot, so moving the pointer
 // moves it too.
-let cursor = null; // the screenshot the keys are on
+let cursor: string | null = null; // the screenshot the keys are on
 let keyed = false; // the ring shows while the keys were used last
 
-const itemEls = () => [...body.querySelectorAll('[data-path]')];
-const itemOf = (file) => itemEls().find((el) => el.dataset.path === file);
+const itemEls = () => [...body.querySelectorAll<HTMLElement>('[data-path]')];
+const itemOf = (file: string) => itemEls().find((el) => el.dataset.path === file);
 
 // Only a pointer that really moved takes the spot back. The list scrolling
 // under a still pointer (to keep the ring in view) doesn't count.
@@ -496,8 +506,8 @@ body.addEventListener('mousemove', (e) => {
   const at = `${e.screenX},${e.screenY}`;
   if (at === lastPointer) return;
   lastPointer = at;
-  const item = e.target.closest('[data-path]');
-  if (item) cursor = item.dataset.path;
+  const item = target(e).closest<HTMLElement>('[data-path]');
+  if (item) cursor = pathOf(item);
   if (keyed) {
     keyed = false;
     render();
@@ -506,7 +516,7 @@ body.addEventListener('mousemove', (e) => {
 
 // The screenshot the keys go to next. Up and Down go by where things are
 // on screen, so in Grid they move a row; Left and Right step through Grid.
-function step(dir) {
+function step(dir: Direction) {
   const list = itemEls();
   if (!list.length) return null;
   const at = cursor && itemOf(cursor);
@@ -522,17 +532,17 @@ function step(dir) {
   });
   if (!ahead.length) return at;
   // The nearest line that way, then the one closest across.
-  const edge = (el) => (down ? el.getBoundingClientRect().top : el.getBoundingClientRect().bottom);
+  const edge = (el: HTMLElement) => (down ? el.getBoundingClientRect().top : el.getBoundingClientRect().bottom);
   const lineAt = down ? Math.min(...ahead.map(edge)) : Math.max(...ahead.map(edge));
   const mid = r.left + r.width / 2;
-  const across = (el) => Math.abs(el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 - mid);
+  const across = (el: HTMLElement) => Math.abs(el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 - mid);
   return ahead.filter((el) => Math.abs(edge(el) - lineAt) < 4).sort((a, b) => across(a) - across(b))[0];
 }
 
-function moveTo(el, extend) {
+function moveTo(el: HTMLElement | null | undefined, extend: boolean) {
   if (!el) return;
   const from = cursor;
-  cursor = el.dataset.path;
+  cursor = pathOf(el);
   keyed = true;
   // Shift picks as it moves.
   if (extend) {
@@ -548,7 +558,8 @@ function moveTo(el, extend) {
   if (lookKeys) openLook(cursor, true);
 }
 
-const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+type Direction = 'up' | 'down' | 'left' | 'right';
+const ARROWS: Record<string, Direction> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 
 document.addEventListener('keydown', (e) => {
   if (!state || !state.shots.length || confirming) return;
@@ -561,7 +572,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     // With some picked, Return copies them, like the selection bar's button.
     if (picked.size) copyPicked();
-    else clickShot(cursor, {});
+    else if (cursor) clickShot(cursor, {});
   } else if (e.metaKey && e.key.toLowerCase() === 'c') {
     e.preventDefault();
     if (picked.size) copyPicked();
