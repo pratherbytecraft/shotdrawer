@@ -97,6 +97,8 @@ export type SettingsPage = 'general' | 'look' | 'about';
 export interface Invokes {
   state: { args: []; result: State };
   'shots:details': { args: [files: string[]]; result: Record<string, ShotInfo> };
+  // Whether this Mac's drags on drag areas are done by the app (see src/main/windowdrag.ts).
+  'window:codeDrag': { args: []; result: boolean };
 }
 
 // Pages to main, one way: the arguments.
@@ -125,6 +127,11 @@ export interface Sends {
   'history:unremove': [files: string[]];
   'folder:menu': [];
   'privacy:open': [];
+  // A press on a drag area: where in the window it was, in points.
+  'window:dragStart': [x: number, y: number];
+  'window:dragEnd': [];
+  // A double click on a drag area, which does what the Mac's Desktop and Dock setting says.
+  'window:titleDouble': [];
 }
 
 // Main to pages: the payload.

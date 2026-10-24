@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["src/main", "src/shared", "src/preload.ts", "bin", "scripts", "test/unit"]
+  "include": ["src/main", "src/shared", "bin", "scripts", "test/unit"]
 }

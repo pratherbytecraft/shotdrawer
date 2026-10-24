@@ -12,8 +12,8 @@ button { background: none; border: 0; padding: 0; cursor: default; }
 [hidden] { display: none !important; }
 
 .window { display: flex; height: 100%; }
-.side { width: 200px; background: var(--side); border-right: 1px solid var(--line); padding: 44px 8px 12px; flex: none; -webkit-app-region: drag; }
-.side > * { -webkit-app-region: no-drag; }
+.side { width: 200px; background: var(--side); border-right: 1px solid var(--line); padding: 44px 8px 12px; flex: none; --region: drag; -webkit-app-region: var(--drag-region, drag); }
+.side > * { --region: no-drag; -webkit-app-region: no-drag; }
 .search { display: block; width: calc(100% - 8px); margin: 0 4px 10px; padding: 5px 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--control); color: var(--text); font-size: 12px; outline: none; }
 .search:focus { border-color: var(--accent); }
 .nav a { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; color: var(--text); }
@@ -22,7 +22,7 @@ button { background: none; border: 0; padding: 0; cursor: default; }
 .nav .ic svg { width: 13px; height: 13px; }
 
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.title { padding: 16px 20px 6px; font-size: 15px; font-weight: 600; -webkit-app-region: drag; }
+.title { padding: 16px 20px 6px; font-size: 15px; font-weight: 600; --region: drag; -webkit-app-region: var(--drag-region, drag); }
 .content { flex: 1; overflow: auto; padding: 4px 20px 20px; }
 .page { display: none; }
 .page.on { display: block; }

@@ -19,6 +19,7 @@ import * as updates from './updates';
 import * as link from './link';
 import * as startbar from './startbar';
 import * as look from './look';
+import * as windowdrag from './windowdrag';
 import type { Access, LinkKey, State } from '../shared/types';
 
 // From the package, not app.getVersion(): Shotdrawer.app carries no version
@@ -182,6 +183,7 @@ ipc.on('privacy:open', () => {
   shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders');
   panel.hide();
 });
+windowdrag.init();
 
 // Shows a screenshot picked in its folder, or a folder itself, in
 // Filedrawer when it's picked and installed, else in Finder.
