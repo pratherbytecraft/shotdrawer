@@ -251,8 +251,10 @@ function markCopied(file) {
 
 // A plain click copies the path. Cmd click picks or unpicks one, Shift
 // click picks the run from the last one clicked, or unpicks one picked.
+// While anything is picked a plain click picks or unpicks too, the way the
+// circles show; Copy Paths copies them.
 function clickShot(file, e) {
-  if (e.metaKey) {
+  if (e.metaKey || (!e.shiftKey && picked.size)) {
     if (picked.has(file)) picked.delete(file);
     else picked.add(file);
     anchor = file;
@@ -501,9 +503,11 @@ document.addEventListener('keydown', (e) => {
   if (dir && (grid || dir === 'up' || dir === 'down')) {
     e.preventDefault();
     moveTo(step(dir), e.shiftKey);
-  } else if (e.key === 'Enter' && cursor) {
+  } else if (e.key === 'Enter' && (cursor || picked.size)) {
     e.preventDefault();
-    clickShot(cursor, {});
+    // With some picked, Return copies them, like the selection bar's button.
+    if (picked.size) copyPicked();
+    else clickShot(cursor, {});
   } else if (e.metaKey && e.key.toLowerCase() === 'c') {
     e.preventDefault();
     if (picked.size) copyPicked();

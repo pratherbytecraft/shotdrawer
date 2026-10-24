@@ -100,6 +100,30 @@ describe('the list', () => {
     cy.calls('copy').should('have.length', 0);
   });
 
+  it('while some are picked a plain click picks or unpicks, without copying', () => {
+    cy.page('panel/index.html');
+    row('Screenshot today b.png').find('.info').click({ metaKey: true });
+    row('Screenshot yesterday.png').find('.info').click();
+    cy.get('.row.sel').should('have.length', 2);
+    row('Screenshot today b.png').find('.info').click();
+    cy.get('.row.sel').should('have.length', 1);
+    cy.calls('copy').should('have.length', 0);
+    // Return copies the picked one.
+    cy.get('body').type('{enter}');
+    cy.calls('copyMany').should('deep.equal', [[['/Users/test/Documents/Temp Screenshots/Screenshot yesterday.png']]]);
+  });
+
+  it('a click after a sweep adds to the picks', () => {
+    cy.page('panel/index.html');
+    row('Screenshot today b.png').find('.info').trigger('mousedown', { button: 0 });
+    row('Screenshot today a.png').find('.info').trigger('mouseover', { buttons: 1 });
+    cy.window().trigger('mouseup');
+    cy.get('.row.sel').should('have.length', 2);
+    row('Screenshot earlier b.png').find('.info').click();
+    cy.get('.row.sel').should('have.length', 3);
+    cy.calls('copy').should('have.length', 0);
+  });
+
   it('Cmd click on a picked one unpicks it', () => {
     cy.page('panel/index.html');
     row('Screenshot yesterday.png').find('.info').click({ metaKey: true });
