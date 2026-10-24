@@ -27,6 +27,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 .row .chk.on { background: var(--accent); border-color: var(--accent); }
 .chk svg { width: 10px; height: 10px; color: #fff; }
 .row .acts { display: none; gap: 2px; }
+/* The row the keys are on. */
+.row.kb, .tile.kb { box-shadow: inset 0 0 0 2px var(--accent); }
 .row:hover .acts { display: flex; }
 .row .info { flex: 1; min-width: 0; }
 .row .l1 { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

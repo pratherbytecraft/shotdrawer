@@ -214,6 +214,56 @@ describe('the list', () => {
     cy.get('#undo').should('have.css', 'visibility', 'hidden');
   });
 
+  it('the arrows move a ring through the list, Return copies, Shift picks as it moves', () => {
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = false;
+    });
+    cy.get('.row').should('have.length', 5);
+    cy.get('body').type('{downarrow}');
+    cy.get('.row.kb').should('have.length', 1).and('have.attr', 'data-path').and('match', /today b\.png$/);
+    cy.get('body').type('{downarrow}{downarrow}');
+    cy.get('.row.kb').should('have.attr', 'data-path').and('match', /yesterday\.png$/);
+    cy.get('body').type('{uparrow}');
+    cy.get('.row.kb').should('have.attr', 'data-path').and('match', /today a\.png$/);
+    cy.get('body').type('{enter}');
+    cy.calls('copy').should('deep.equal', [['/Users/test/Documents/Temp Screenshots/Screenshot today a.png']]);
+    cy.get('body').type('{shift}{downarrow}{downarrow}');
+    cy.get('.row.sel').should('have.length', 3);
+  });
+
+  it('Cmd A picks all, Cmd C copies the picked ones, Cmd Delete trashes them', () => {
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = false;
+    });
+    cy.get('.row').should('have.length', 5);
+    cy.get('body').type('{cmd}a');
+    cy.get('.row.sel').should('have.length', 5);
+    cy.get('body').type('{cmd}c');
+    cy.calls('copyMany').its(0).its(0).should('have.length', 5);
+    cy.get('body').type('{cmd}{backspace}');
+    cy.calls('trash').its(0).its(0).should('have.length', 5);
+  });
+
+  it('Cmd C with nothing picked copies the row the keys are on', () => {
+    cy.page('panel/index.html', (state) => {
+      state.settings.closeAfterCopy = false;
+    });
+    cy.get('.row').should('have.length', 5);
+    cy.get('body').type('{downarrow}{cmd}c');
+    cy.calls('copy').should('deep.equal', [['/Users/test/Documents/Temp Screenshots/Screenshot today b.png']]);
+  });
+
+  it('in Grid, Left and Right step and Down goes to the next row of pictures', () => {
+    cy.page('panel/index.html', (state) => {
+      state.settings.layout = 'grid';
+    });
+    cy.get('.tile').should('have.length', 5);
+    cy.get('body').type('{rightarrow}{rightarrow}');
+    cy.get('.tile.kb').should('have.attr', 'data-path').and('match', /today a\.png$/);
+    cy.get('body').type('{downarrow}');
+    cy.get('.tile.kb').should('have.attr', 'data-path').and('match', /yesterday\.png$/);
+  });
+
   it('Esc with nothing picked closes the list', () => {
     cy.page('panel/index.html');
     cy.get('.row').should('have.length', 5);

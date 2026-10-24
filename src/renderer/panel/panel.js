@@ -138,13 +138,14 @@ function render() {
       const mark = isCopied ? `<div class="copied">${I.check} Copied</div>` : '';
       const attrs = `data-path="${esc(shot.path)}"`;
       const on = picked.has(shot.path);
+      const ring = keyed && cursor === shot.path ? ' kb' : '';
       const chk = picked.size ? `<div class="chk${on ? ' on' : ''}">${on ? I.check : ''}</div>` : '';
       const btns = `<button class="icon-btn" data-act="show" title="Show in ${state.viewer}">${I.folder}</button><button class="icon-btn" data-act="menu" title="More">${I.dots}</button>`;
       if (grid) {
-        out += `<div class="tile${on ? ' sel' : ''}" ${attrs}>${thumb(shot)}${chk}<div class="over">${btns}</div>${mark}<div class="cap">${esc(time)}</div></div>`;
+        out += `<div class="tile${on ? ' sel' : ''}${ring}" ${attrs}>${thumb(shot)}${chk}<div class="over">${btns}</div>${mark}<div class="cap">${esc(time)}</div></div>`;
       } else {
         const when = day === 'Today' ? ` <span>· ${ago(taken, now)}</span>` : '';
-        out += `<div class="row${on ? ' sel' : ''}" ${attrs}>${chk}${thumb(shot)}
+        out += `<div class="row${on ? ' sel' : ''}${ring}" ${attrs}>${chk}${thumb(shot)}
           <div class="info"><div class="l1">${esc(time)}${when}</div><div class="l2">${esc(sizeLine(details[shot.path]))}</div></div>${mark || `<div class="acts">${btns}</div>`}</div>`;
       }
       return out;
@@ -199,6 +200,7 @@ function take(next) {
   if (!state.shots.length) confirming = false;
   const here = new Set(state.shots.map((s) => s.path));
   for (const p of picked) if (!here.has(p)) picked.delete(p);
+  if (cursor && !here.has(cursor)) cursor = null;
   render();
   fill();
 }
@@ -209,6 +211,8 @@ api.onState(take);
 api.onShown(() => {
   confirming = false;
   undo = null;
+  cursor = null;
+  keyed = false;
   picked.clear();
   anchor = null;
   render();
@@ -357,13 +361,15 @@ body.addEventListener('dragstart', (e) => {
   api.drag(files, info && info.thumb);
 });
 
-document.getElementById('sel-copy').addEventListener('click', () => {
+document.getElementById('sel-copy').addEventListener('click', () => copyPicked());
+
+function copyPicked() {
   api.copyMany(pickedPaths());
   pickedCopied = Date.now() + COPIED_FOR;
   render();
   setTimeout(render, COPIED_FOR + 20);
   closeSoon();
-});
+}
 document.getElementById('sel-clear').addEventListener('click', clearPicked);
 
 // The file name shows when the pointer rests on a screenshot.
@@ -419,6 +425,102 @@ document.getElementById('gear').addEventListener('click', () => api.openSettings
 
 // The window takes the page's height.
 new ResizeObserver(() => api.setHeight(panel.offsetHeight)).observe(panel);
+
+// MARK: keys, from mockups/picking.html. The row the keys are on gets a
+// ring; the pointer and the keys share that spot, so moving the pointer
+// moves it too.
+let cursor = null; // the screenshot the keys are on
+let keyed = false; // the ring shows while the keys were used last
+
+const itemEls = () => [...body.querySelectorAll('[data-path]')];
+const itemOf = (file) => itemEls().find((el) => el.dataset.path === file);
+
+// Only a pointer that really moved takes the spot back. The list scrolling
+// under a still pointer (to keep the ring in view) doesn't count.
+let lastPointer = '';
+body.addEventListener('mousemove', (e) => {
+  const at = `${e.screenX},${e.screenY}`;
+  if (at === lastPointer) return;
+  lastPointer = at;
+  const item = e.target.closest('[data-path]');
+  if (item) cursor = item.dataset.path;
+  if (keyed) {
+    keyed = false;
+    render();
+  }
+});
+
+// The screenshot the keys go to next. Up and Down go by where things are
+// on screen, so in Grid they move a row; Left and Right step through Grid.
+function step(dir) {
+  const list = itemEls();
+  if (!list.length) return null;
+  const at = cursor && itemOf(cursor);
+  if (!at) return dir === 'up' || dir === 'left' ? list[list.length - 1] : list[0];
+  const i = list.indexOf(at);
+  if (dir === 'left') return list[Math.max(0, i - 1)];
+  if (dir === 'right') return list[Math.min(list.length - 1, i + 1)];
+  const r = at.getBoundingClientRect();
+  const down = dir === 'down';
+  const ahead = list.filter((el) => {
+    const b = el.getBoundingClientRect();
+    return down ? b.top >= r.bottom - 2 : b.bottom <= r.top + 2;
+  });
+  if (!ahead.length) return at;
+  // The nearest line that way, then the one closest across.
+  const edge = (el) => (down ? el.getBoundingClientRect().top : el.getBoundingClientRect().bottom);
+  const lineAt = down ? Math.min(...ahead.map(edge)) : Math.max(...ahead.map(edge));
+  const mid = r.left + r.width / 2;
+  const across = (el) => Math.abs(el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2 - mid);
+  return ahead.filter((el) => Math.abs(edge(el) - lineAt) < 4).sort((a, b) => across(a) - across(b))[0];
+}
+
+function moveTo(el, extend) {
+  if (!el) return;
+  const from = cursor;
+  cursor = el.dataset.path;
+  keyed = true;
+  // Shift picks as it moves.
+  if (extend) {
+    if (from) picked.add(from);
+    picked.add(cursor);
+    anchor = cursor;
+  }
+  hideTip();
+  render();
+  const now = itemOf(cursor);
+  if (now) now.scrollIntoView({ block: 'nearest' });
+}
+
+const ARROWS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+
+document.addEventListener('keydown', (e) => {
+  if (!state || !state.shots.length || confirming) return;
+  const dir = ARROWS[e.key];
+  const grid = state.settings.layout === 'grid';
+  if (dir && (grid || dir === 'up' || dir === 'down')) {
+    e.preventDefault();
+    moveTo(step(dir), e.shiftKey);
+  } else if (e.key === 'Enter' && cursor) {
+    e.preventDefault();
+    clickShot(cursor, {});
+  } else if (e.metaKey && e.key.toLowerCase() === 'c') {
+    e.preventDefault();
+    if (picked.size) copyPicked();
+    else if (cursor) {
+      api.copy(cursor);
+      markCopied(cursor);
+    }
+  } else if (e.metaKey && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    for (const s of state.shots) picked.add(s.path);
+    render();
+  } else if (e.metaKey && e.key === 'Backspace') {
+    e.preventDefault();
+    const files = picked.size ? pickedPaths() : cursor ? [cursor] : [];
+    if (files.length) api.trash(files);
+  }
+});
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;

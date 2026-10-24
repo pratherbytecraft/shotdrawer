@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('shotdrawer', {
   show: (file) => ipcRenderer.send('shot:show', file),
   menu: (file, picked) => ipcRenderer.send('shot:menu', file, picked),
   drag: (files, picture) => ipcRenderer.send('shots:drag', files, picture),
+  trash: (files) => ipcRenderer.send('shots:trash', files),
   onCopied: on('copied'),
   openSettings: (page) => ipcRenderer.send('settings:open', page),
   onSettingsPage: on('settings:page'),

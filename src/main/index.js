@@ -131,6 +131,7 @@ ipcMain.on('history:clear', () => {
 ipcMain.on('shots:copy', (_e, files) => clipboard.writeText(copy.join(files, settings.get().copyFormat)));
 ipcMain.on('shot:show', (_e, file) => showIn(file));
 ipcMain.on('shot:menu', (_e, file, picked) => shotMenu(file, picked));
+ipcMain.on('shots:trash', (_e, files) => trash(files));
 ipcMain.on('shots:drag', (e, files, picture) => {
   let icon = picture ? nativeImage.createFromDataURL(picture) : null;
   if (!icon || icon.isEmpty()) icon = nativeImage.createFromPath(path.join(__dirname, '..', '..', 'assets', 'Shotdrawer.icns'));
